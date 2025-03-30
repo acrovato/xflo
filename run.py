@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 # test encoding: à-é-è-ô-ï-€
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -66,7 +66,7 @@ def main():
     args = parse_args()
     testname = os.path.abspath(args.file)
     if not os.path.isfile(testname):
-        raise Exception(f'File not found: {testname}')
+        raise FileNotFoundError(f'File not found: {testname}')
     setup_workdir(testname, args.clean)
 
     # Run

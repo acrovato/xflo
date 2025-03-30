@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ __version__ = re.findall(
 )[0]
 
 setup(
-    name='xflo',
+    name='xFlo',
     version=__version__,
     description='eXperimental Flow.',
     keywords='Euler CFD aerodynamic finite-volumes airfoils Gmsh Python',

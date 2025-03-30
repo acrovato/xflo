@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -32,8 +32,8 @@ class LaxFriedrichs(Flux):
         f1 = self._flu.compute_flux(rho1, q1, p1, state1[3])
 
         # Compute maximum wavespeed
-        c0 = self._flu.compute_speed_sound(rho0, p0)
-        c1 = self._flu.compute_speed_sound(rho1, p1)
+        c0 = self._flu.eval_speed_sound(rho0, p0)
+        c1 = self._flu.eval_speed_sound(rho1, p1)
         a = max([q0.dot(n) + c0, q1.dot(n) + c1])
 
         # Compute LF flux

@@ -13,15 +13,8 @@ xFlo is a Python code solving the compressible Euler equations around airfoils. 
 Detailed build and use instructions can be found in the [wiki](https://github.com/acrovato/xflo/wiki).
 
 ## General todo list
-- add description
-- store vtk data structure in VtkWriter for faster write
-- create logger
 - create API
 - get models path automatically when running tests/examples
-- rework data structure in mesh?
-- store states/primitives/residuals together?
-- store states/primitives/residuals in dedicated data structure class
-- move local time stepping inside Discretization?
 - rework mesh generation
 - implement JST and ROE
 - implement implicit time integration

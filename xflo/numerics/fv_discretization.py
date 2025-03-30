@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,10 +20,18 @@ class FiniteVolume:
     """Finite volume discretization
 
     Attributes:
-    _problem : Problem object
+    problem : Problem object
         Problem definition
-    _flux : Flux object
+    _flx : Flux object
         Flux formulation
+    _nvar_cell : int
+        Number of variables (unknown) per cell
+    _ncells : int
+        Number of cells
+    _states : np.array(float)
+        Conservative variables vector
+    _residuals : np.array(float)
+        Residuals vector
     """
     def __init__(self, problem, flux):
         # Data objetcs
@@ -40,52 +48,94 @@ class FiniteVolume:
         self._residuals = np.zeros(n_dofs, dtype=float)
 
     def get_states(self):
-        """"TODO"""
+        """"Returns:
+        states : np.array(float)
+        """
         return self._states
 
     def get_residuals(self):
+        """"Returns:
+        residuals : np.array(float)
+        """
         return self._residuals
 
-    def set_states(self, states):
-        """Set states and update primitives"""
-        self._states = states
-        for i_cell in range(self._ncells):
-            self.problem.update_variable(i_cell, self._states[self._get_uids(i_cell)])
-
     def initialize(self):
-        """Set initial conditions
+        """Set states, residuals and problem
         """
-        # Get primitives
-        rinf, uinf, vinf, pinf, _ = self.problem.get_variables()
-        state_inf = self.problem.fluid.eval_state(np.array([rinf[0], uinf[0], vinf[0], pinf[0]]))
+        # Set states from freestream
+        state_inf = self.problem.get_freestream_state()
         for i_var in range(self._nvar_cell):
             self._states[i_var::self._nvar_cell] = state_inf[i_var]
 
-    def compute_jacobian(self):
+        # Update residuals and problem
+        self._compute_residuals()
+        self.problem.update(self._states, self._residuals, self._get_uids)
+
+    def update(self, states):
+        """Set states and update problem
+
+        Parameters:
+        states : np.array(float)
+            Conservative variables vector
+        """
+        self._states = states
+        self._compute_residuals()
+        self.problem.update(self._states, self._residuals, self._get_uids)
+
+    def compute_timestep(self, cfl):
+        """Compute local time step divided by cell area correspoding to given CFL number
+
+        Parameters:
+        cfl : float
+            CFL number
+
+        Returns:
+        dt_a : np.array(float)
+            Local time step of cells divided by cell area
+        """
+        area = self.problem.mesh.get_cells_area()
+        u = self.problem.get_variables('VelocityX')
+        v = self.problem.get_variables('VelocityY')
+        c = self.problem.get_variables('SpeedOfSound')
+        dt_a = np.zeros(self._ncells, dtype=float)
+        for i_cell in range(self._ncells):
+            a = np.linalg.norm(np.array([u[i_cell], v[i_cell]])) + c[i_cell] # wave speed
+            dt_a[i_cell] = cfl * np.sqrt(area[i_cell]) / a / area[i_cell]
+        return np.repeat(dt_a, self._nvar_cell)
+
+    def _compute_jacobian(self):
         raise
 
-    def compute_residuals(self):
+    def _compute_residuals(self):
         """Compute cell residuals"""
         # Reset residuals
         self._residuals[:] = 0.
 
+        # Get edge to cell connectivity
+        cids = self.problem.mesh.get_edges_cells()
+
         # Compute fluxes on boundary edges and add residuals to cells
         for bc in self.problem.get_bcs():
-            cids, lgts, nrms = self.problem.mesh.get_boundary_edges(bc.get_name())
-            for i_edge in range(cids.shape[0]):
+            # get boundary edges and metrics
+            bnd = self.problem.mesh.get_boundary(bc.get_name())
+            eids = bnd.get_edge_ids()
+            lgts, nrms = bnd.get_edge_metrics()
+            for i_edge, eid in enumerate(eids):
                 # neighboor cell and corresponding unknown indices
-                cid = cids[i_edge][0]
+                cid = cids[eid][0]
                 sid = self._get_uids(cid)
                 # integrated projected flux
                 ghost_state = bc.compute_ghost(self._states[sid], nrms[i_edge])
                 self._residuals[sid] += self._flx.compute_residual(self._states[sid], ghost_state, nrms[i_edge], lgts[i_edge])
 
         # Compute flux on internal edges and add residuals to cells
-        cids, lgts, nrms = self.problem.mesh.get_field_edges()
-        for i_edge in range(cids.shape[0]):
+        fld = self.problem.mesh.get_field()
+        eids = fld.get_edge_ids()
+        lgts, nrms = fld.get_edge_metrics()
+        for i_edge, eid in enumerate(eids):
             # "left" and "right" neighboor cells
-            cid0 = cids[i_edge][0]
-            cid1 = cids[i_edge][1]
+            cid0 = cids[eid][0]
+            cid1 = cids[eid][1]
             # corresponding unknown indices
             sid0 = self._get_uids(cid0)
             sid1 = self._get_uids(cid1)
@@ -95,6 +145,5 @@ class FiniteVolume:
             self._residuals[sid1] -= ipflx
 
     def _get_uids(self, cid):
-        """Get unkown indices corresponding to cell
-        TODO"""
+        """Get unkown indices corresponding to cell"""
         return np.array(range(cid * self._nvar_cell, (cid + 1) * self._nvar_cell))

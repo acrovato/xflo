@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -25,10 +25,9 @@ class ExplicitEuler(TimeIntegration):
     def __init__(self, discretization, writer, init_cfl=0.1, rel_tol=1e-6, max_iter=1000, save_freq=100):
         super().__init__(discretization, writer, init_cfl, rel_tol, max_iter, save_freq)
 
-    def compute_step(self):
+    def update_solution(self):
         # Update states
-        new_states = self._disc.get_states() + self._compute_local_timestep() * self._disc.get_residuals()
+        states = self._disc.get_states() + self._disc.compute_timestep(self._cfl) * self._disc.get_residuals()
 
         # Update residuals and primitives
-        self._disc.set_states(new_states)
-        self._disc.compute_residuals()
+        self._disc.update(states)

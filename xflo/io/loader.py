@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,17 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.error import XFloError, XFloRuntimeError, XFloFileNotFound
 from xflo.structure.mesh import Mesh
 import gmsh
 import numpy as np
-
-# TODO allow custom sizes and names
 
 # Gmsh element type to nodes and edges count
 ELEMTYPE_NNODES = {2: 3, 3: 4} # Tri, Quad
 
 class GmshLoader():
     """Create mesh and hold data structure
+    TODO allow custom sizes and names
 
     Attributes:
     _name : str
@@ -45,7 +45,7 @@ class GmshLoader():
     def create_mesh(self, fname=None):
         """Create the mesh from a set of coordinates
 
-        Arguments:
+        Parameters:
         fname : str (default : None)
             Path to file containing the coordinates of the airfoil
 
@@ -154,7 +154,7 @@ class GmshLoader():
     def _load_coordinates(self, fname):
         """Load and check airfoil coordinates
 
-        Arguments:
+        Parameters:
         fname : str
             Path to file containing the coordinates of the airfoil
 
@@ -168,15 +168,15 @@ class GmshLoader():
         try:
             coords = np.loadtxt(fname, skiprows=1)
         except:
-            raise FileNotFoundError(f'GmshLoader.__load_coordinates: file "{fname}" not found!')
+            raise XFloFileNotFound(f'File "{fname}" not found!')
 
         # Check if exactly two columns have been provided
         if coords.shape[1] != 2:
-            raise RuntimeError(f'GmshLoader.__load_coordinates: expected a list of coordinates with 2 columns, but got {coords.shape[1]} instead!')
+            raise XFloRuntimeError(f'Expected a list of coordinates with 2 columns, but got {coords.shape[1]} instead!')
 
         # Check if coordinates are in Selig format
         if coords[0, 0] != 1.0 or coords[-1, 0] != 1.0:
-            raise RuntimeError('GmshLoader.__load_coordinates: airfoil coordinates must be ordered using Selig format: TE point must be first and last (duplicated) and its x-coordinate must be equal to 1.0!')
+            raise XFloRuntimeError('Airfoil coordinates must be ordered using Selig format: TE point must be first and last (duplicated) and its x-coordinate must be equal to 1.0!')
 
         # Reverse order of coordinates if in standard Selig format to have inward normals
         if coords[1, 1] > coords[-2, 1]:
@@ -193,7 +193,7 @@ class GmshLoader():
     def _create_geometry(self, coords, is_sharp):
         """Create geometry in Gmsh
 
-        Arguments:
+        Parameters:
         coords : numpy.array
             Airfoil coordinates
         is_sharp : bool
@@ -251,7 +251,7 @@ class GmshLoader():
         if is_sharp:
             gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsList', [airf_ptags[0]])
             gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsSizesList', [10])
-        #gmsh.model.mesh.field.set_as_boundary_layer(bl_f)
+        gmsh.model.mesh.field.set_as_boundary_layer(bl_f)
         gmsh.model.geo.synchronize()
 
     def _create_mesh(self):
@@ -268,7 +268,7 @@ class GmshLoader():
         except Exception as e:
             gmsh.write(self._name + '.msh')
             self._finalize()
-            raise Exception(e)
+            raise XFloError(e)
 
     def _initialize(self):
         """Start Gmsh and logger
@@ -284,7 +284,7 @@ class GmshLoader():
         log_msgs = gmsh.logger.get()
         gmsh.logger.stop()
         # Write to file
-        file = open(f'log_gmsh_{self._name}', 'w')
+        file = open('log_gmsh.txt', 'w')
         for m in log_msgs:
             file.write(m + '\n')
         file.close()

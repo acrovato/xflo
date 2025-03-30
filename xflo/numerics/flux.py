@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,11 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.error import XFloNotImplemented
+
 class Flux:
     """Flux formulation
 
     Attributes:
-    _fluid : Fluid object
+    _flu : Fluid object
         Constitutive relations
     """
     def __init__(self, fluid):
@@ -27,7 +29,7 @@ class Flux:
     def compute_residual(self, state0, state1, n, l):
         """Compute and integrate the flux projected on the edge normal
 
-        Arguments:
+        Parameters:
         state0 : np.array(4)
             Conservatives variables in the first cell linked to the face
         state1 : np.array(4)
@@ -41,4 +43,4 @@ class Flux:
         flux_proj : np.array(4)
             Numerical flux projected on the face normal direction
         """
-        raise NotImplementedError('Flux.compute() not implemented!')
+        raise XFloNotImplemented('Flux not implemented!')

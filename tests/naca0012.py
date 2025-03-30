@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@ from xflo.structure.problem import Problem
 from xflo.numerics.lax_friedrichs import LaxFriedrichs
 from xflo.numerics.fv_discretization import FiniteVolume
 from xflo.numerics.explicit_euler import ExplicitEuler
+from xflo.utils import isa, plot
 
 def get_model(name):
     import os.path
@@ -30,9 +31,8 @@ def get_model(name):
 def main():
     # Freestream
     aoa = 2.
-    mach = 0.1
-    rho = 1.225
-    p = 101325
+    mach = 0.5
+    rho, p = isa.eval(0.)
     # Geometry
     fname = get_model('naca0012_sharp.dat')
     c_ref = 1
@@ -55,7 +55,7 @@ def main():
     # Create problem
     pbl = Problem(msh, fluid)
     pbl.set_farfield('farfield')
-    pbl.set_wall('airfoil')
+    airf = pbl.set_wall('airfoil')
     pbl.set_freestream(aoa, mach, rho, p)
     pbl.set_geometry(c_ref, x_ref, z_ref)
 
@@ -68,6 +68,12 @@ def main():
 
     # Solve flow
     tint.run()
+
+    # Plot results
+    xy = airf.get_coords()
+    cp = airf.get_pressure_coef()
+    mach = airf.get_mach()
+    plot.save(xy, cp, mach, show=True)
 
 if __name__ == '__main__':
     main()

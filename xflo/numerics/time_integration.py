@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.log import logger
+from xflo.utils.error import XFloNotImplemented
 import numpy as np
 import enum, time
 
@@ -23,6 +25,22 @@ class Status(enum.Enum):
     FAILED = -1 # NaN in the solution/residual vector
 
 class TimeIntegration:
+    """Base class for time integrators
+
+    Attributes:
+    _disc : xflo.numerics.fv_discretization.FiniteVolume
+        Spatial discretization
+    _wrt : xflo.io.writer.Writer
+        Data writer
+    _cfl : float
+        Initial CFL number
+    _rtol : float
+        Relative tolerance on density residual
+    _mxit : int
+        Maximum number of iterations
+    _sfreq : int
+        Interval at which to save solution to disk
+    """
     def __init__(self, discretization, writer, init_cfl, rel_tol, max_iter, save_freq):
         self._disc = discretization
         self._wrt = writer
@@ -39,62 +57,46 @@ class TimeIntegration:
             Solver status
         """
         # Set initial condition
-        print('Setting initial condition...', end=' ')
+        logger.info('Setting initial condition...')
         self._disc.initialize()
-        self._disc.compute_residuals()
-        res_rho0 = np.linalg.norm(self._disc.get_residuals()[::4])
-        res_rhoe0 = np.linalg.norm(self._disc.get_residuals()[3::4])
-        print('done.')
+        res_rho0 = np.linalg.norm(self._disc.problem.get_variables('ResidualsDensity'))
+        res_rhoe0 = np.linalg.norm(self._disc.problem.get_variables('ResidualsEnergy'))
+        self._wrt.write(0, self._disc.problem.get_variables())
 
         # Time integration
-        print('Starting time integration')
-        print('{0:>12s} {1:>12s} {2:>12s} {3:>12s}'.format('Iter', 'Res[rho]', 'Res[rhoE]', 'CFL'))
+        logger.info('Starting time integration')
+        logger.info('{0:>6s} {1:>8s} {2:>8s} {3:>12s} {4:>12s} {5:>8s}'.format('Iter', 'CLift', 'CDrag', 'Res[rho]', 'Res[rhoE]', 'CFL'))
+        logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:12.2f} {4:12.2f} {5:8.2f}'.format(0, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), 0., 0., self._cfl))
         nit = 0
         status = Status.MAX_IT
         cpu = time.perf_counter()
         while (nit < self._mxit):
             # update solution states and residuals
-            self.compute_step()
+            self.update_solution()
             # compute relative residuals
-            res_rho = np.linalg.norm(self._disc.get_residuals()[::4]) / res_rho0
-            res_rhoe = np.linalg.norm(self._disc.get_residuals()[3::4]) / res_rhoe0
+            res_rho = np.linalg.norm(self._disc.problem.get_variables('ResidualsDensity')) / res_rho0
+            res_rhoe = np.linalg.norm(self._disc.problem.get_variables('ResidualsEnergy')) / res_rhoe0
             # print status
-            print('{0:12d} {1:12.6f} {2:12.2f} {3:12.2f}'.format(nit, np.log10(res_rho), np.log10(res_rhoe), self._cfl))
-            # save solution
-            if nit % self._sfreq == 0:
-                self._wrt.write(nit, self._disc.problem.get_solution())
             nit += 1
-            # check convergence
+            logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:12.2f} {4:12.2f} {5:8.2f}'.format(nit, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), np.log10(res_rho), np.log10(res_rhoe), self._cfl))
+            # check convergence and save solution if required
             if res_rho <= self._rtol:
+                self._wrt.write(nit, self._disc.problem.get_variables())
                 status = Status.CONVERGED
                 break
             elif np.isnan(res_rho):
+                self._wrt.write(nit, self._disc.problem.get_variables())
                 status = Status.FAILED
                 break
             else:
+                if nit % self._sfreq == 0:
+                    self._wrt.write(nit, self._disc.problem.get_variables())
                 continue
         cpu = time.perf_counter() - cpu
-        print(f'Computation done! Wall-clock time: {cpu} s')
+        logger.info(f'Computation finished! Wall-clock time: {cpu} s')
         return status
 
-    def compute_step(self):
-        """Compute solution u at next iteration
+    def update_solution(self):
+        """Compute solution at next iteration
         """
-        raise NotImplementedError('TimeIntegration.compute_step: not implemented!')
-
-    def _compute_local_timestep(self):
-        """Compute local time step divided by cell area
-        TODO move inside disc?
-
-        Returns:
-        dt : np.array(float)
-            Local time step of cells
-        """
-        area = self._disc.problem.mesh.get_cells_area()
-        _, u, v, _, mach = self._disc.problem.get_variables()
-        dt_a = np.zeros(area.shape[0], dtype=float)
-        for i_cell in range(area.shape[0]):
-            q = np.array([u[i_cell], v[i_cell]])
-            a = np.linalg.norm(q) + np.linalg.norm(q) / mach[i_cell]
-            dt_a[i_cell] = self._cfl * np.sqrt(area[i_cell]) / a / area[i_cell]
-        return np.repeat(dt_a, 4)
+        raise XFloNotImplemented('TimeIntegration not implemented!')
