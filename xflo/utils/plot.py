@@ -17,29 +17,33 @@
 import matplotlib.pyplot as plt
 
 def save(xy, cp, mach, show=False):
-    fig, axs = plt.subplots(3, 1)
-
     # Pressure coefficient
+    fig, axs = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
     axs[0].plot(xy[:, 0], cp, lw=2)
     axs[0].set_ylabel('$c_p$')
     axs[0].invert_yaxis()
-
-    # Mach number
-    axs[1].plot(xy[:, 0], mach, lw=2)
-    axs[1].set_ylabel('$M$')
-
-    # Airfoil contour
-    axs[2].plot(xy[:, 0], xy[:,1], lw=2)
-    axs[2].set_xlabel('$x/c$')
-    axs[2].set_ylabel('$y/c$')
-
-    # Remove borders
+    axs[1].plot(xy[:, 0], xy[:,1], lw=2)
+    axs[1].set_xlabel('$x/c$')
+    axs[1].set_ylabel('$y/c$')
     for ax in axs:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
     fig.tight_layout()
+    plt.savefig('cp.png')
+    if show:
+        plt.draw()
 
-    # Save and show
-    plt.savefig('airfoil.png')
+    # Mach number
+    fig, axs = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+    axs[0].plot(xy[:, 0], mach, lw=2)
+    axs[0].set_ylabel('$M$')
+    axs[1].plot(xy[:, 0], xy[:,1], lw=2)
+    axs[1].set_xlabel('$x/c$')
+    axs[1].set_ylabel('$y/c$')
+    for ax in axs:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+    fig.tight_layout()
+    plt.savefig('mach.png')
     if show:
         plt.show()
