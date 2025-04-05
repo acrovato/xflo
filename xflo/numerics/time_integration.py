@@ -65,8 +65,8 @@ class TimeIntegration:
 
         # Time integration
         logger.info('Starting time integration')
-        logger.info('{0:>6s} {1:>8s} {2:>8s} {3:>12s} {4:>12s} {5:>8s}'.format('Iter', 'CLift', 'CDrag', 'Res[rho]', 'Res[rhoE]', 'CFL'))
-        logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:12.2f} {4:12.2f} {5:8.2f}'.format(0, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), 0., 0., self._cfl))
+        logger.info('{0:>6s} {1:>8s} {2:>8s} {3:>8s} {4:>8s} {5:>8s} {6:>8s}'.format('Iter', 'CLift', 'CDrag', 'CMomY', 'Res[rho]', 'Res[rhoE]', 'CFL'))
+        logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:8.4f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(0, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), self._disc.problem.get_pitch_coef(), 0., 0., self._cfl))
         nit = 0
         status = Status.MAX_IT
         cpu = time.perf_counter()
@@ -78,7 +78,7 @@ class TimeIntegration:
             res_rhoe = np.linalg.norm(self._disc.problem.get_variables('ResidualsEnergy')) / res_rhoe0
             # print status
             nit += 1
-            logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:12.2f} {4:12.2f} {5:8.2f}'.format(nit, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), np.log10(res_rho), np.log10(res_rhoe), self._cfl))
+            logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:8.4f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(nit, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), self._disc.problem.get_pitch_coef(), np.log10(res_rho), np.log10(res_rhoe), self._cfl))
             # check convergence and save solution if required
             if res_rho <= self._rtol:
                 self._wrt.write(nit, self._disc.problem.get_variables())

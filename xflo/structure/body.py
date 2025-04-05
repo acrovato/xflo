@@ -25,6 +25,8 @@ class Body:
         Name of the body
     _cids : np.array(int)
         IDs of cell connected to this body
+    _vcrd : np.array(float)
+        Vertices coordinates
     _ecgs : np.array(float)
         Edges center of gravity
     _elgt : np.array(float)
@@ -65,6 +67,11 @@ class Body:
         for i_edge, eid in enumerate(eids):
             self._ecgs[i_edge, :] = 0.5 * (coords[vids[eid, 0]] + coords[vids[eid, 1]])
 
+        # Get vertices coordinates
+        self._vcrd = np.zeros((n_edges + 1, 2), dtype=float)
+        for i_edge in range(n_edges + 1):
+            self._vcrd[i_edge, :] = coords[vids[eids[i_edge % n_edges], 0]]
+
         # Init variables
         self._mach = np.zeros(n_edges, dtype=float)
         self._cp = np.zeros(n_edges, dtype=float)
@@ -72,23 +79,50 @@ class Body:
         self._cd = 0.
         self._cm = 0.
 
-    def get_coords(self):
-        """Returns:
+    def get_coords(self, at_vertex=False):
+        """Get body coordinates
+
+        Parameters:
+        at_vertex : bool (default: False)
+            Whether to return edges center or vertices coordinates
+
+        Returns:
         coordinates of edge CG : np.array(float)
         """
-        return self._ecgs
+        if at_vertex:
+            return self._vcrd
+        else:
+            return self._ecgs
 
-    def get_mach(self):
-        """Returns:
+    def get_mach(self, at_vertex=False):
+        """Get Mach number on body surface
+
+        Parameters:
+        at_vertex : bool (default: False)
+            Whether to return data at cell centers or interpolated at vertices
+
+        Returns:
         mach number : np.array(float)
         """
-        return self._mach
+        if at_vertex:
+            return self._interp(self._mach)
+        else:
+            return self._mach
 
-    def get_pressure_coef(self):
-        """Returns:
+    def get_pressure_coef(self, at_vertex=False):
+        """Get pressure coefficient on body surface
+
+        Parameters:
+        at_vertex : bool (default: False)
+            Whether to return data at cell centers or interpolated at vertices
+
+        Returns:
         pressure coefficient : np.array(float)
         """
-        return self._cp
+        if at_vertex:
+            return self._interp(self._cp)
+        else:
+            return self._cp
 
     def get_lift_coef(self):
         """Returns:
@@ -137,3 +171,11 @@ class Body:
         self._cl = (cxy[1] * np.cos(aoa) - cxy[0] * np.sin(aoa)) / cref
         self._cd = (cxy[1] * np.sin(aoa) + cxy[0] * np.cos(aoa)) / cref
         self._cm = cm / cref
+
+    def _interp(self, data):
+        """Interpolate data at nodes"""
+        n_vtx = self._vcrd.shape[0]
+        idata = np.zeros(n_vtx)
+        for i in range(n_vtx):
+            idata[i] = 0.5 * (data[i - 1] + data[i % (n_vtx - 1)])
+        return idata

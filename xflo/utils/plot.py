@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 def save(xy, cp, mach, show=False):
     # Pressure coefficient
@@ -22,7 +23,7 @@ def save(xy, cp, mach, show=False):
     axs[0].plot(xy[:, 0], cp, lw=2)
     axs[0].set_ylabel('$c_p$')
     axs[0].invert_yaxis()
-    axs[1].plot(xy[:, 0], xy[:,1], lw=2)
+    axs[1].plot(xy[:, 0], xy[:, 1], lw=2)
     axs[1].set_xlabel('$x/c$')
     axs[1].set_ylabel('$y/c$')
     for ax in axs:
@@ -37,7 +38,7 @@ def save(xy, cp, mach, show=False):
     fig, axs = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
     axs[0].plot(xy[:, 0], mach, lw=2)
     axs[0].set_ylabel('$M$')
-    axs[1].plot(xy[:, 0], xy[:,1], lw=2)
+    axs[1].plot(xy[:, 0], xy[:, 1], lw=2)
     axs[1].set_xlabel('$x/c$')
     axs[1].set_ylabel('$y/c$')
     for ax in axs:
@@ -47,3 +48,7 @@ def save(xy, cp, mach, show=False):
     plt.savefig('mach.png')
     if show:
         plt.show()
+
+    # Write data to disk
+    data = np.column_stack((xy, cp, mach))
+    np.savetxt('airfoil.dat', data, fmt='%8.4f', delimiter=', ', header='{:>6s}, {:>8s}, {:>8s}, {:>8s},'.format('x', 'y', 'cp', 'mach'))

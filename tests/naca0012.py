@@ -70,9 +70,9 @@ def main():
     tint.run()
 
     # Plot results
-    xy = airf.get_coords()
-    cp = airf.get_pressure_coef()
-    mach = airf.get_mach()
+    xy = airf.get_coords(True)
+    cp = airf.get_pressure_coef(True)
+    mach = airf.get_mach(True)
     plot.save(xy, cp, mach, show=True)
 
 if __name__ == '__main__':

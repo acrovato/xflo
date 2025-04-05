@@ -239,6 +239,7 @@ class GmshLoader():
             gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[1], 2)
         for tag in ff_ctags:
             gmsh.model.geo.mesh.set_transfinite_curve(tag, 11)
+        #gmsh.model.geo.mesh.set_recombine(2, fld_tag)
         gmsh.model.geo.synchronize()
 
         # Add boundary layer
@@ -259,7 +260,6 @@ class GmshLoader():
         """
         import os
         gmsh.option.set_number('Mesh.Algorithm', 6)
-        #gmsh.option.set_number('Mesh.RecombineAll', 1)
         gmsh.option.set_number('Mesh.Optimize', 1)
         gmsh.option.set_number('General.NumThreads', os.cpu_count())
         try:

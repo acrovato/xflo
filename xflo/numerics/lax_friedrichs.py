@@ -23,18 +23,13 @@ class LaxFriedrichs(Flux):
         super().__init__(fluid)
 
     def compute_residual(self, state0, state1, n, l):
-        # Compute primitives from states
-        rho0, q0, p0 = self._flu.eval_primitive(state0)
-        rho1, q1, p1 = self._flu.eval_primitive(state1)
+        # Compute mean value of states
+        state = 0.5 * (state0 + state1)
 
-        # Compute Euler fluxes
-        f0 = self._flu.compute_flux(rho0, q0, p0, state0[3])
-        f1 = self._flu.compute_flux(rho1, q1, p1, state1[3])
-
-        # Compute maximum wavespeed
-        c0 = self._flu.eval_speed_sound(rho0, p0)
-        c1 = self._flu.eval_speed_sound(rho1, p1)
-        a = max([q0.dot(n) + c0, q1.dot(n) + c1])
+        # Compute primitives, Euler flux and wavespeed
+        rho, q, p = self._flu.eval_primitive(state)
+        f = self._flu.compute_flux(rho, q, p, state[3])
+        a = q.dot(n) + self._flu.eval_speed_sound(rho, p)
 
         # Compute LF flux
-        return (0.5 * (f0 + f1).dot(n) - 0.5 * a * (state0 - state1)) * l
+        return (f.dot(n) - 0.5 * a * (state0 - state1)) * l
