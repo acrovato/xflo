@@ -23,8 +23,6 @@ class Mesh:
     Attributes:
     _name : str
         Name of the mesh
-    _ncells : int
-        Number of field cells
     _verts : np.array(float), size: (n_nodes, 2)
         Coordinates of the mesh vertices
     _cells : np.array(np.array(int)), size: (n_cells, n_nodes_cell)
@@ -59,17 +57,16 @@ class Mesh:
         """
         # Init data structure
         self._name = name
-        self._ncells = len(cells)
         self._verts = np.array(vertices, dtype=float)
         self._cells = np.array([np.array(cell, dtype=int) for cell in cells], dtype=np.ndarray)
         self._edg_cel = np.array([np.array(edge, dtype=int) for edge in edges_cells], dtype=np.ndarray)
         self._edg_vrt = np.array(edge_vertices, dtype=int)
 
         # Create groups
-        self._fld = Group('field', field_edges, edge_vertices, self._verts)
+        self._fld = Group('field', field_edges, edge_vertices, self._edg_cel, self._cells, self._verts)
         self._bnd = {}
         for bnd_name, bnd_edgs in boundary_edges.items():
-            self._bnd[bnd_name] = Group(bnd_name, bnd_edgs, edge_vertices, self._verts, sort=True)
+            self._bnd[bnd_name] = Group(bnd_name, bnd_edgs, edge_vertices, self._edg_cel, self._cells, self._verts, sort=True)
 
         # Compute cells area
         self._carea = np.zeros(self._cells.shape[0])
@@ -91,7 +88,13 @@ class Mesh:
         """Returns:
         number of cells : int
         """
-        return self._ncells
+        return self._cells.shape[0]
+
+    def get_nedges(self):
+        """Returns:
+        number of edges : int
+        """
+        return self._edg_cel.shape[0]
 
     def get_vertices(self):
         """Returns:

@@ -22,14 +22,14 @@ class LaxFriedrichs(Flux):
     def __init__(self, fluid):
         super().__init__(fluid)
 
-    def compute_residual(self, state0, state1, n, l):
+    def compute_residual(self, s0, s1, ds0, ds1, n, l, d):
         # Compute mean value of states
-        state = 0.5 * (state0 + state1)
+        s = 0.5 * (s0 + s1)
 
         # Compute primitives, Euler flux and wavespeed
-        rho, q, p = self._flu.eval_primitive(state)
-        f = self._flu.compute_flux(rho, q, p, state[3])
-        a = q.dot(n) + self._flu.eval_speed_sound(rho, p)
+        rho, q, p = self._flu.eval_primitive(s)
+        f = self._flu.compute_flux(rho, q, p, s[3])
+        a = abs(q.dot(n)) + self._flu.eval_speed_sound(rho, p)
 
         # Compute LF flux
-        return (f.dot(n) - 0.5 * a * (state0 - state1)) * l
+        return (f.dot(n) - 0.5 * a * (s0 - s1)) * l

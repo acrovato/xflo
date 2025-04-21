@@ -41,7 +41,7 @@ def main():
     # Numerics
     init_cfl = 0.25
     rel_tol = 1e-3
-    max_iter = 10000
+    max_iter = 2000
 
     # Load mesh
     msh_ldr = GmshLoader('naca0012')

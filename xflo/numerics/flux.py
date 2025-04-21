@@ -26,21 +26,27 @@ class Flux:
     def __init__(self, fluid):
         self._flu = fluid
 
-    def compute_residual(self, state0, state1, n, l):
+    def compute_residual(self, s0, s1, ds0, ds1, n, l, d):
         """Compute and integrate the flux projected on the edge normal
 
         Parameters:
-        state0 : np.array(4)
-            Conservatives variables in the first cell linked to the face
-        state1 : np.array(4)
-            Conservatives variables in the second cell linked to the face
+        s0 : np.array(4)
+            Conservatives variables in the edge's owner cell
+        s1 : np.array(4)
+            Conservatives variables in the edge's neighboor cell
+        ds0 : np.array(4)
+            Gradient of conservatives variables in the edge's owner cell
+        ds1 : np.array(4)
+            Gradient of conservatives variables in the edge's neighboor cell
         n : np.array(2)
             Edge unit normal vector
         l : float
             Edge length
+        d : float
+            Distance between owner and neighboor cells linked to edge
 
         Returns:
         flux_proj : np.array(4)
-            Numerical flux projected on the face normal direction
+            Integrated flux projected on the edge normal direction
         """
         raise XFloNotImplemented('Flux not implemented!')

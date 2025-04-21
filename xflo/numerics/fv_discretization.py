@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from .gradient import Gradient
 import numpy as np
 
 class FiniteVolume:
@@ -24,8 +25,6 @@ class FiniteVolume:
         Problem definition
     _flx : Flux object
         Flux formulation
-    _nvar_cell : int
-        Number of variables (unknown) per cell
     _ncells : int
         Number of cells
     _states : np.array(float)
@@ -35,10 +34,11 @@ class FiniteVolume:
     _dt : np.array(float)
         Local time step divided by cell area
     """
-    def __init__(self, problem, flux):
+    def __init__(self, problem, flux, gradient=None):
         # Data objetcs
         self.problem = problem
         self._flx = flux
+        self._grd = gradient if gradient is not None else Gradient(problem)
 
         # Set sizes
         self._ncells = self.problem.mesh.get_ncells() # number of cells
@@ -71,7 +71,7 @@ class FiniteVolume:
 
         # Update residuals and problem
         self._compute_residuals()
-        self.problem.update(self._states, self._residuals, self._get_uids)
+        self.problem.update(self._states, self._residuals)
 
     def update(self, states):
         """Set states and update problem
@@ -99,7 +99,6 @@ class FiniteVolume:
         u = self.problem.get_variables('VelocityX')
         v = self.problem.get_variables('VelocityY')
         c = self.problem.get_variables('SpeedOfSound')
-        dt_a = np.zeros(self._ncells, dtype=float)
         for i_cell in range(self._ncells):
             a = np.linalg.norm(np.array([u[i_cell], v[i_cell]])) + c[i_cell] # wave speed
             self._dt[self.problem.get_uids(i_cell)] = cfl * np.sqrt(area[i_cell]) / a / area[i_cell]
@@ -113,6 +112,9 @@ class FiniteVolume:
         # Reset residuals
         self._residuals[:] = 0.
 
+        # Compute gradients
+        grads = self._grd.compute(self._states)
+
         # Get edge to cell connectivity
         cids = self.problem.mesh.get_edges_cells()
 
@@ -122,18 +124,20 @@ class FiniteVolume:
             bnd = self.problem.mesh.get_boundary(bc.get_name())
             eids = bnd.get_edge_ids()
             lgts, nrms = bnd.get_edge_metrics()
+            dsts = bnd.get_cell_distances()
             for i_edge, eid in enumerate(eids):
                 # neighboor cell and corresponding unknown indices
                 cid = cids[eid][0]
                 sid = self.problem.get_uids(cid)
                 # integrated projected flux
                 ghost_state = bc.compute_ghost(self._states[sid], nrms[i_edge])
-                self._residuals[sid] += self._flx.compute_residual(self._states[sid], ghost_state, nrms[i_edge], lgts[i_edge])
+                self._residuals[sid] += self._flx.compute_residual(self._states[sid], ghost_state, grads[sid], grads[sid], nrms[i_edge], lgts[i_edge], dsts[i_edge])
 
         # Compute flux on internal edges and add residuals to cells
         fld = self.problem.mesh.get_field()
         eids = fld.get_edge_ids()
         lgts, nrms = fld.get_edge_metrics()
+        dsts = fld.get_cell_distances()
         for i_edge, eid in enumerate(eids):
             # "left" and "right" neighboor cells
             cid0 = cids[eid][0]
@@ -142,6 +146,6 @@ class FiniteVolume:
             sid0 = self.problem.get_uids(cid0)
             sid1 = self.problem.get_uids(cid1)
             # integrated projected flux
-            ipflx = self._flx.compute_residual(self._states[sid0], self._states[sid1], nrms[i_edge], lgts[i_edge])
+            ipflx = self._flx.compute_residual(self._states[sid0], self._states[sid1], grads[sid0], grads[sid1], nrms[i_edge], lgts[i_edge], dsts[i_edge])
             self._residuals[sid0] += ipflx
             self._residuals[sid1] -= ipflx
