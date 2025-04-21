@@ -20,7 +20,7 @@ class FiniteVolume:
     """Finite volume discretization
 
     Attributes:
-    problem : Problem object
+    problem : xflo.structure.problem.Problem
         Problem definition
     _flx : Flux object
         Flux formulation
@@ -32,6 +32,8 @@ class FiniteVolume:
         Conservative variables vector
     _residuals : np.array(float)
         Residuals vector
+    _dt : np.array(float)
+        Local time step divided by cell area
     """
     def __init__(self, problem, flux):
         # Data objetcs
@@ -39,13 +41,13 @@ class FiniteVolume:
         self._flx = flux
 
         # Set sizes
-        self._nvar_cell = 4 # number of variables per cell
         self._ncells = self.problem.mesh.get_ncells() # number of cells
 
         # Conservative varibales and residuals
-        n_dofs = self._ncells * self._nvar_cell # number of degrees of freedom
+        n_dofs = self._ncells * self.problem.get_nukn() # number of degrees of freedom
         self._states = np.zeros(n_dofs, dtype=float)
         self._residuals = np.zeros(n_dofs, dtype=float)
+        self._dt = np.zeros(n_dofs, dtype=float)
 
     def get_states(self):
         """"Returns:
@@ -64,8 +66,8 @@ class FiniteVolume:
         """
         # Set states from freestream
         state_inf = self.problem.get_freestream_state()
-        for i_var in range(self._nvar_cell):
-            self._states[i_var::self._nvar_cell] = state_inf[i_var]
+        for i_var in range(self.problem.get_nukn()):
+            self._states[i_var::self.problem.get_nukn()] = state_inf[i_var]
 
         # Update residuals and problem
         self._compute_residuals()
@@ -80,7 +82,7 @@ class FiniteVolume:
         """
         self._states = states
         self._compute_residuals()
-        self.problem.update(self._states, self._residuals, self._get_uids)
+        self.problem.update(self._states, self._residuals)
 
     def compute_timestep(self, cfl):
         """Compute local time step divided by cell area correspoding to given CFL number
@@ -100,8 +102,8 @@ class FiniteVolume:
         dt_a = np.zeros(self._ncells, dtype=float)
         for i_cell in range(self._ncells):
             a = np.linalg.norm(np.array([u[i_cell], v[i_cell]])) + c[i_cell] # wave speed
-            dt_a[i_cell] = cfl * np.sqrt(area[i_cell]) / a / area[i_cell]
-        return np.repeat(dt_a, self._nvar_cell)
+            self._dt[self.problem.get_uids(i_cell)] = cfl * np.sqrt(area[i_cell]) / a / area[i_cell]
+        return self._dt
 
     def _compute_jacobian(self):
         raise
@@ -123,7 +125,7 @@ class FiniteVolume:
             for i_edge, eid in enumerate(eids):
                 # neighboor cell and corresponding unknown indices
                 cid = cids[eid][0]
-                sid = self._get_uids(cid)
+                sid = self.problem.get_uids(cid)
                 # integrated projected flux
                 ghost_state = bc.compute_ghost(self._states[sid], nrms[i_edge])
                 self._residuals[sid] += self._flx.compute_residual(self._states[sid], ghost_state, nrms[i_edge], lgts[i_edge])
@@ -137,13 +139,9 @@ class FiniteVolume:
             cid0 = cids[eid][0]
             cid1 = cids[eid][1]
             # corresponding unknown indices
-            sid0 = self._get_uids(cid0)
-            sid1 = self._get_uids(cid1)
+            sid0 = self.problem.get_uids(cid0)
+            sid1 = self.problem.get_uids(cid1)
             # integrated projected flux
             ipflx = self._flx.compute_residual(self._states[sid0], self._states[sid1], nrms[i_edge], lgts[i_edge])
             self._residuals[sid0] += ipflx
             self._residuals[sid1] -= ipflx
-
-    def _get_uids(self, cid):
-        """Get unkown indices corresponding to cell"""
-        return np.array(range(cid * self._nvar_cell, (cid + 1) * self._nvar_cell))

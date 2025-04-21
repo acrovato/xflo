@@ -144,8 +144,14 @@ class PerfectGas:
         """Compute the Euler flux vector
 
         Parameters:
-        state : np.array(4)
-            Vector of conserved variables
+        rho : float
+            Density
+        q : np.array(float)
+            Velocity vector
+        p : float
+            Pressure
+        rhoe : float
+            Total energy
 
         Returns:
         flux : np.array(4, 2)

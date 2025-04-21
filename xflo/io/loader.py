@@ -55,13 +55,13 @@ class GmshLoader():
         """
         # Infer coordinates file name if not given and load coordinates
         fname = fname if fname else self._name + '.dat'
-        coords, is_sharp = self._load_coordinates(fname)
+        coords, le_idx, is_sharp = self._load_coordinates(fname)
 
         # Initialize Gmsh
         self._initialize()
 
         # Create geometry and mesh using Gmsh, then load into internal data structure
-        self._create_geometry(coords, is_sharp)
+        self._create_geometry(coords, le_idx, is_sharp)
         self._create_mesh()
         msh = self._build_mesh_data()
 
@@ -161,6 +161,8 @@ class GmshLoader():
         Return:
         coords : numpy.array
             Airfoil coordinates
+        le_idx : int
+            Index of leading edge point
         is_sharp : bool
             Whether the airfoil has a sharp or a blunt TE
         """
@@ -188,14 +190,19 @@ class GmshLoader():
             is_sharp = True
             coords = np.delete(coords, (-1), axis=0) # delete duplicated last point
 
-        return coords, is_sharp
+        # Get leading edge index
+        le_idx = np.argmin(coords[:, 0])
 
-    def _create_geometry(self, coords, is_sharp):
+        return coords, le_idx, is_sharp
+
+    def _create_geometry(self, coords, le_idx, is_sharp):
         """Create geometry in Gmsh
 
         Parameters:
         coords : numpy.array
             Airfoil coordinates
+        le_idx : int
+            Index of leading edge point
         is_sharp : bool
             Whether the airfoil has a sharp or a blunt TE
         """
@@ -203,12 +210,13 @@ class GmshLoader():
         airf_ptags = []
         for c in coords:
             airf_ptags.append(gmsh.model.geo.add_point(c[0], c[1], 0.0))
-        airf_ctags = []
         # Add airfoil spline
+        airf_ctags = []
+        airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags[0:le_idx + 1]))
         if is_sharp:
-            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags + [airf_ptags[0]]))
+            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags[le_idx:] + [airf_ptags[0]]))
         else:
-            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags))
+            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags[le_idx:]))
             airf_ctags.append(gmsh.model.geo.add_line(airf_ptags[-1], airf_ptags[0]))
 
         # Add farfield boundary points
@@ -234,9 +242,10 @@ class GmshLoader():
         gmsh.model.add_physical_group(2, [fld_tag], name='field')
 
         # Add meshing constraints
-        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[0], 101, 'Bump', coef=10.)
+        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[0], 51, 'Bump', coef=0.2)
+        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[1], 51, 'Bump', coef=0.2)
         if not is_sharp:
-            gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[1], 2)
+            gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[2], 2)
         for tag in ff_ctags:
             gmsh.model.geo.mesh.set_transfinite_curve(tag, 11)
         #gmsh.model.geo.mesh.set_recombine(2, fld_tag)

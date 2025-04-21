@@ -36,6 +36,8 @@ class Problem:
         Bodies to monitor
     _var : xflo.structure.variables.Variables
         Flow variables and residuals
+    _nukn : int
+        Number of equations and unknowns
     _aoa : float
         Angle of attack
     _minf : float
@@ -63,6 +65,7 @@ class Problem:
         self._wal = []
         self._bdy = []
         self._var = Variables(mesh.get_ncells())
+        self._nukn = 4
 
         # Freestream
         self._aoa = 0.
@@ -96,6 +99,18 @@ class Problem:
         variables : dict(str: np.array(float)) or np.array(float)
             Dictionary of named variables (if name is None), or requested variable array"""
         return self._var.get(name)
+
+    def get_nukn(self):
+        """Returns:
+        number of unkowns : int
+        """
+        return self._nukn
+
+    def get_uids(self, cid):
+        """Returns:
+        Unkown indices corresponding to location (edge, cell, ...) ID
+        """
+        return np.array(range(cid * self._nukn, (cid + 1) * self._nukn))
 
     def get_freestream_state(self):
         """Compute freestream conservative variables
@@ -183,7 +198,7 @@ class Problem:
         self._xref[0] = x_ref
         self._xref[1] = z_ref
 
-    def update(self, states, residuals, get_ids):
+    def update(self, states, residuals):
         """Update flow loads
 
         Parameters:
@@ -191,14 +206,12 @@ class Problem:
             Conservative variables vector
         residuals : np.array(float)
             Residuals vector
-        get_ids : method
-            Method to get unknown IDs corresponding to a cell ID
         """
         # Update variables and residuals
         cinf = self._flu.eval_speed_sound(self._rinf, self._pinf)
         rqinf = 0.5 * self._rinf * self._minf * cinf * self._minf * cinf
         for i_cell in range(self.mesh.get_ncells()):
-            ids = get_ids(i_cell)
+            ids = self.get_uids(i_cell)
             # primitives
             rho, q, p = self._flu.eval_primitive(states[ids])
             u = q[0]
