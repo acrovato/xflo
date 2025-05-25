@@ -95,5 +95,5 @@ class VtkWriter():
         nit = '' if nit is None else '_{0:04d}'.format(nit)
         fname = f'{self._name}{nit}.vtu'
         self._writer.SetFileName(fname)
-        logger.info(f'Writing file: {fname}...')
+        logger.info(f'Writing file: {fname}')
         self._writer.Write()

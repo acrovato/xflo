@@ -18,6 +18,7 @@ from xflo.boundary.riemann_invariant import RiemannInvariant
 from xflo.boundary.slip_wall import SlipWall
 from xflo.structure.body import Body
 from xflo.structure.variables import Variables
+from xflo.utils.log import logger
 import numpy as np
 
 class Problem:
@@ -32,7 +33,7 @@ class Problem:
         Farfield boundary condition
     _wal : list(xflo.boundary.slip_wall.SlipWall)
         Wall boundary conditions
-    _bdy : list(xflo.structure.body.Body
+    _bdy : list(xflo.structure.body.Body)
         Bodies to monitor
     _var : xflo.structure.variables.Variables
         Flow variables and residuals
@@ -148,6 +149,8 @@ class Problem:
         name : str
             Name of the physical group on which the boundary condition is defined
         """
+        logger.info(f'Setting farfield boundary condition on boundary: {name}')
+        # Set BC on farfield
         self._far = RiemannInvariant(self._flu, name)
 
     def set_wall(self, name):
@@ -161,6 +164,8 @@ class Problem:
         body : xflo.structure.body.Body
             Body associated to wall boundary conditon which will be monitored
         """
+        logger.info(f'Setting slip wall boundary condition on boundary: {name}')
+        # Set BC on body and monitor body
         self._wal.append(SlipWall(self._flu, name))
         self._bdy.append(Body(name, self.mesh))
         return self._bdy[-1]
@@ -178,6 +183,11 @@ class Problem:
         p : float
             Pressure
         """
+        logger.info('Setting freestream:')
+        logger.info(f'- angle of attack: {aoa} deg')
+        logger.info(f'- mach number: {mach}')
+        logger.info(f'- density: {rho} kg/m^3')
+        logger.info(f'- pressure: {p} Pa')
         # Set freestream state
         self._aoa = aoa * np.pi / 180.
         self._minf = mach
@@ -185,18 +195,24 @@ class Problem:
         self._pinf = p
         self._far.set_freestream(self._aoa, mach, rho, p)
 
-    def set_geometry(self, c_ref, x_ref, z_ref):
+    def set_geometry(self, c_ref, x_ref, y_ref):
         """Set reference geometry variables
 
         Parameters:
         c_ref : float
             Reference chord length
-        x_ref : np.array(float)
-            Reference center
+        x_ref : float
+            x-coordinate of reference center
+        y_ref : float
+            y-coordinate of reference center
         """
+        logger.info('Setting reference geometry:')
+        logger.info(f'- chord length: {c_ref} m')
+        logger.info(f'- center point: [{x_ref}, {y_ref}] m')
+        # Set reference geometry
         self._cref = c_ref
         self._xref[0] = x_ref
-        self._xref[1] = z_ref
+        self._xref[1] = y_ref
 
     def update(self, states, residuals):
         """Update flow loads

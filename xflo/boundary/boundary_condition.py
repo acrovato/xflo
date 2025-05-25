@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.gradient import compute_grad_fd
 from xflo.utils.error import XFloNotImplemented
 
 class BoundaryCondition:
@@ -39,13 +40,27 @@ class BoundaryCondition:
         """Compute conservative variables at boundary edge
 
         Parameters:
-        state : np.array(4)
+        state : np.array(float), size: (4)
             Conservatives variables in the interior cell linked to the edge
-        n : np.array(2)
+        n : np.array(float), size: (2)
             Edge unit normal vector
 
         Returns:
-        ghost_state : np.array(4)
+        ghost_state : np.array(float), size: (4)
             Conservatives variables at boundary edge
         """
         raise XFloNotImplemented('Boundary condition not implemented!')
+
+    def compute_ghost_jacbian(self, state, n):
+        """Compute gradient of conservative variables at boundary edge with respect to conservative variables in interior cell
+
+        Parameters:
+        state : np.array(float), size: (4)
+            Conservatives variables in the interior cell linked to the edge
+        n : np.array(float), size: (2)
+            Edge unit normal vector
+
+        Returns:
+        Gradient of boundary conservatives variables wrt. interior conservatives variables : np.array(float), size: (4, 4)
+        """
+        return compute_grad_fd(self.compute_ghost, [state, n], [0])[0]

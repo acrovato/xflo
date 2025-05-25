@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.gradient import compute_grad_fd
 from xflo.utils.error import XFloNotImplemented
 
 class Flux:
@@ -30,15 +31,15 @@ class Flux:
         """Compute and integrate the flux projected on the edge normal
 
         Parameters:
-        s0 : np.array(4)
+        s0 : np.array(float), size: (4)
             Conservatives variables in the edge's owner cell
-        s1 : np.array(4)
+        s1 : np.array(float), size: (4)
             Conservatives variables in the edge's neighboor cell
-        ds0 : np.array(4)
+        ds0 : np.array(float), size: (4, 2)
             Gradient of conservatives variables in the edge's owner cell
-        ds1 : np.array(4)
+        ds1 : np.array(float), size: (4, 2)
             Gradient of conservatives variables in the edge's neighboor cell
-        n : np.array(2)
+        n : np.array(float), size: (2)
             Edge unit normal vector
         l : float
             Edge length
@@ -46,7 +47,33 @@ class Flux:
             Distance between owner and neighboor cells linked to edge
 
         Returns:
-        flux_proj : np.array(4)
+        flux_proj : np.array(float), size: (4, 1)
             Integrated flux projected on the edge normal direction
         """
         raise XFloNotImplemented('Flux not implemented!')
+
+    def compute_jacobian(self, s0, s1, ds0, ds1, n, l, d):
+        """Compute gradient of flux with respect to conservative variables
+
+        Parameters:
+        s0 : np.array(float), size: (4)
+            Conservatives variables in the edge's owner cell
+        s1 : np.array(float), size: (4)
+            Conservatives variables in the edge's neighboor cell
+        ds0 : np.array(float), size: (4, 2)
+            Gradient of conservatives variables in the edge's owner cell
+        ds1 : np.array(float), size: (4, 2)
+            Gradient of conservatives variables in the edge's neighboor cell
+        n : np.array(float), size: (2)
+            Edge unit normal vector
+        l : float
+            Edge length
+        d : float
+            Distance between owner and neighboor cells linked to edge
+
+        Returns:
+        Gradient of flux wrt. conservatives variables : list(np.array(float), size: (4, 4)), size: (2)
+        """
+        args = [s0, s1, ds0, ds1, n, l, d]
+        wrt = [0, 1]
+        return compute_grad_fd(self.compute_residual, args, wrt)

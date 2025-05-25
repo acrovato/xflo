@@ -154,7 +154,7 @@ class PerfectGas:
             Total energy
 
         Returns:
-        flux : np.array(4, 2)
+        flux : np.array(float)
             Flux vector
         """
         # Get velocity components

@@ -32,6 +32,6 @@ setup(
     url='https://github.com/acrovato/xflo',
     license='GNU General Public License 3.0',
     packages=find_packages(include=['xflo*']),
-    install_requires=['numpy>=1.22', 'gmsh==4.10.5'],
+    install_requires=['numpy>=1.22', 'scipy>=1.12', 'gmsh==4.10.5'],
     classifiers=['Operating System :: OS Independent', 'Programming Language :: Python'],
 )

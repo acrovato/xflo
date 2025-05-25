@@ -48,11 +48,13 @@ class JST(Flux):
         delta_s0 = + ds0.dot(d * n) # state difference at "outer" edge
         delta_s1 = + ds1.dot(d * n) # state difference at "inner" edge
 
+        # Compute states in "previous" and "next" cells
+        sm = s1 - ds1.dot(d * n)
+        sp = s0 + ds0.dot(d * n)
+
         # Compute shock sensor (density-based)
-        sns0 = abs(delta_s[0] - delta_s0[0]) / max(abs(delta_s[0]) + abs(delta_s0[0]), 1e-8)
-        sns1 = abs(delta_s1[0] - delta_s[0]) / max(abs(delta_s1[0]) + abs(delta_s[0]), 1e-8)
-        sns0 *= sns0
-        sns1 *= sns1
+        sns0 = abs((sp[0] - 2*s0[0] + s1[0]) / (sp[0] + 2*s0[0] + s1[0]))
+        sns1 = abs((s0[0] - 2*s1[0] + sm[0]) / (s0[0] + 2*s1[0] + sm[0]))
 
         # Compute switching functions
         eps2 = self._k2 * 0.5 * (sns0 + sns1)

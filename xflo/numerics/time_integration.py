@@ -32,8 +32,10 @@ class TimeIntegration:
         Spatial discretization
     _wrt : xflo.io.writer.Writer
         Data writer
-    _cfl : float
+    _icfl : float
         Initial CFL number
+    _ecfl : float
+        Exponent in CFL adaptation law
     _rtol : float
         Relative tolerance on density residual
     _mxit : int
@@ -41,9 +43,11 @@ class TimeIntegration:
     _sfreq : int
         Interval at which to save solution to disk
     """
-    def __init__(self, discretization, writer, init_cfl, rel_tol, max_iter, save_freq):
+    def __init__(self, discretization, writer, init_cfl, exp_cfl, rel_tol, max_iter, save_freq):
         self._disc = discretization
         self._wrt = writer
+        self._icfl = init_cfl
+        self._ecfl = exp_cfl
         self._cfl = init_cfl
         self._rtol = rel_tol
         self._mxit = max_iter
@@ -57,7 +61,7 @@ class TimeIntegration:
             Solver status
         """
         # Set initial condition
-        logger.info('Setting initial condition...')
+        logger.info('Setting initial condition')
         self._disc.initialize()
         res_rho0 = np.linalg.norm(self._disc.problem.get_variables('ResidualsDensity'))
         res_rhoe0 = np.linalg.norm(self._disc.problem.get_variables('ResidualsEnergy'))
@@ -65,8 +69,8 @@ class TimeIntegration:
 
         # Time integration
         logger.info('Starting time integration')
-        logger.info('{0:>6s} {1:>8s} {2:>8s} {3:>8s} {4:>10s} {5:>10s} {6:>8s}'.format('Iter', 'CLift', 'CDrag', 'CMomY', 'Res[rho]', 'Res[rhoE]', 'CFL'))
-        logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:8.4f} {4:10.2f} {5:10.2f} {6:8.2f}'.format(0, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), self._disc.problem.get_pitch_coef(), 0., 0., self._cfl))
+        logger.info('{0:>6s} {1:>8s} {2:>8s} {3:>8s} {4:>10s} {5:>10s} {6:>10s}'.format('Iter', 'CLift', 'CDrag', 'CMomY', 'Res[rho]', 'Res[rhoE]', 'CFL'))
+        logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:8.4f} {4:10.2f} {5:10.2f} {6:10.2f}'.format(0, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), self._disc.problem.get_pitch_coef(), 0., 0., self._cfl))
         nit = 0
         status = Status.MAX_IT
         cpu = time.perf_counter()
@@ -76,9 +80,11 @@ class TimeIntegration:
             # compute relative residuals
             res_rho = np.linalg.norm(self._disc.problem.get_variables('ResidualsDensity')) / res_rho0
             res_rhoe = np.linalg.norm(self._disc.problem.get_variables('ResidualsEnergy')) / res_rhoe0
+            # adapt cfl
+            self._cfl = self._icfl * res_rho ** -self._ecfl
             # print status
             nit += 1
-            logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:8.4f} {4:10.2f} {5:10.2f} {6:8.2f}'.format(nit, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), self._disc.problem.get_pitch_coef(), np.log10(res_rho), np.log10(res_rhoe), self._cfl))
+            logger.info('{0:6d} {1:8.4f} {2:8.4f} {3:8.4f} {4:10.2f} {5:10.2f} {6:10.2f}'.format(nit, self._disc.problem.get_lift_coef(), self._disc.problem.get_drag_coef(), self._disc.problem.get_pitch_coef(), np.log10(res_rho), np.log10(res_rhoe), self._cfl))
             # check convergence and save solution if required
             if res_rho <= self._rtol:
                 self._wrt.write(nit, self._disc.problem.get_variables())
