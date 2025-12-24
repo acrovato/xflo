@@ -261,6 +261,9 @@ class GmshLoader():
         if is_sharp:
             gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsList', [airf_ptags[0]])
             gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsSizesList', [10])
+        else:
+            gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsList', [airf_ptags[0], airf_ptags[-1]])
+            gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsSizesList', [5])
         gmsh.model.mesh.field.set_as_boundary_layer(bl_f)
         gmsh.model.geo.synchronize()
 
