@@ -32,6 +32,7 @@ class PerfectGas:
         Parameters:
         state : np.array(float)
             Conservative variables
+
         Returns:
         rho, q, p : tuple(float)
             Primitive variables
@@ -47,13 +48,14 @@ class PerfectGas:
         Parameters:
         primitive : np.array(float)
             Primitive variables
+
         Returns:
         rho, rhoq, rhoe : np.array(float)
             Conservative variables
         """
         rho = primitive[0]
         rhoq = rho * np.array([primitive[1], primitive[2]])
-        rhoe = primitive[3] / (self._g - 1) + 0.5 * rhoq.dot(rhoq) / rho # p = rho * (g - 1) * (e - u^2/2)
+        rhoe = primitive[3] / (self._g - 1) + 0.5 * rhoq.dot(rhoq) / rho # p = rho * (gamma-1) * (e0-q^2/2)
         return np.array([rho, rhoq[0], rhoq[1], rhoe])
 
     def eval_speed_sound(self, rho, p):
@@ -133,11 +135,11 @@ class PerfectGas:
 
         Returns:
         rho, rhoe : tuple(float)
-            Density and total energy
+            Density and stagnation energy
         """
         rho = ((c * c) / (self._g * s)) ** (1 / (self._g - 1)) # rho = (c^2 / (gamma*s)) ^ 1/(gamma-1)
         p = rho * c * c / self._g # p = rho * c^2 / gamma
-        rhoe = p / (self._g - 1) + 0.5 * rho * q.dot(q) # p = (gamma-1) * rho * (E - 1/2 q^2)
+        rhoe = p / (self._g - 1) + 0.5 * rho * q.dot(q) # p = (gamma-1) * rho * (e0 - 1/2 q^2)
         return rho, rhoe
 
     def compute_flux(self, rho, q, p, rhoe):
@@ -166,5 +168,74 @@ class PerfectGas:
         f[0, :] = np.array([rho * u, rho * v]) # [rho*u, rho*v]
         f[1, :] = np.array([rho * u * u + p, rho * u * v]) # [rho*u*u+p, rho*u*v]
         f[2, :] = np.array([rho * u * v, rho * v * v + p]) # [rho*u*v, rho*v*v+p]
-        f[3, :] = np.array([(rhoe + p) * u, (rhoe + p) * v]) # [(rho*E+p)*u, (rho*E+p)*v]
+        f[3, :] = np.array([(rhoe + p) * u, (rhoe + p) * v]) # [(rho*e0+p)*u, (rho*e0+p)*v]
         return f
+
+    def compute_eigen_decomposition(self, rho, q, c, n):
+        """Compute eigenvalue and eigenvector decomposition of flux Jacobian matrix
+
+        Parameters:
+        rho : float
+            Density
+        q : np.array(float)
+            Velocity vector
+        c : float
+            Speed of sound
+        n : np.array(float)
+            Edge unit normal vector
+
+        Returns:
+        lam, eig, ieig : tulple(np.array(float))
+            Eigenvalue vector, eigenvector matrix, eigenvector inverse matrix
+        """
+        # Pre-compute factors
+        sqvel = 0.5 * q.dot(q)
+        qn = q.dot(n)
+        rho_c = rho / c
+        rhoc_g1 = (rho * c) / (self._g - 1)
+        rho_n = rho * n
+        g1_c2 = (self._g - 1) / (c * c)
+        g1_rhoc = (self._g - 1) / (rho * c)
+        n_rho = n / rho
+
+        # Compute eignvalues
+        lam = np.array([qn, qn, qn + c, qn - c])
+
+        # Compute eigenvectors' matrix
+        eig = np.zeros((4, 4))
+        eig[0, :] = np.array([1.0,
+                            0.0,
+                            0.5 * rho_c,
+                            0.5 * rho_c])
+        eig[1, :] = np.array([q[0],
+                            rho_n[1],
+                            0.5 * (q[0] * rho_c + rho_n[0]),
+                            0.5 * (q[0] * rho_c - rho_n[0])])
+        eig[2, :] = np.array([q[1],
+                            -rho_n[0],
+                            0.5 * (q[1] * rho_c + rho_n[1]),
+                            0.5 * (q[1] * rho_c - rho_n[1])])
+        eig[3, :] = np.array([sqvel,
+                            rho_n[1] * q[0] - rho_n[0] * q[1],
+                            0.5 * (sqvel * rho_c + rho_n[0] * q[0] + rho_n[1] * q[1] + rhoc_g1),
+                            0.5 * (sqvel * rho_c - rho_n[0] * q[0] - rho_n[1] * q[1] + rhoc_g1)])
+
+        # Compute inverse eigenvectors' matrix
+        ieig = np.zeros((4, 4))
+        ieig[0, :] = np.array([1.0 - g1_c2 * sqvel,
+                            g1_c2 * q[0],
+                            g1_c2 * q[1],
+                            -g1_c2])
+        ieig[1, :] = np.array([-n_rho[1] * q[0] + n_rho[0] * q[1],
+                            n_rho[1],
+                            -n_rho[0],
+                            0.0])
+        ieig[2, :] = np.array([-n_rho[0] * q[0] - n_rho[1] * q[1] + g1_rhoc * sqvel,
+                            n_rho[0] - g1_rhoc * q[0],
+                            n_rho[1] - g1_rhoc * q[1],
+                            g1_rhoc])
+        ieig[3, :] = np.array([n_rho[0] * q[0] + n_rho[1] * q[1] + g1_rhoc * sqvel,
+                            -n_rho[0] - g1_rhoc * q[0],
+                            -n_rho[1] - g1_rhoc * q[1],
+                            g1_rhoc])
+        return lam, eig, ieig

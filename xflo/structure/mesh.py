@@ -31,9 +31,9 @@ class Mesh:
         Edges to cells connectivity
     _edg_vrt : np.array(int), size: (n_edges, 2)
         Edges to vertices connectivity
-    _field : xflo.group.Group
+    _fld : xflo.group.Group
         Field group
-    _field : dict(str: xflo.group.Group)
+    _bnd : dict(str: xflo.group.Group)
         Boundary groups
     _carea : np.array(float), size: (n_cells)
         Field cells area

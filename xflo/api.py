@@ -87,6 +87,10 @@ def _select_flux(cfg, fluid):
         k4 = cfg['Scheme']['Parameters'].get('k4', 1./32.)
         c4 = cfg['Scheme']['Parameters'].get('c4', 2.)
         return JST(fluid, k2, k4, c4)
+    elif method == 'Roe':
+        from xflo.numerics.roe import Roe
+        efix = cfg['Scheme']['Parameters'].get('EntropyFix', 1e-6)
+        return Roe(fluid, efix)
     else:
         raise XFloRuntimeError('Convective scheme not available. Choose between: LaxFriedrichs, JST.')
 

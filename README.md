@@ -14,10 +14,10 @@ Detailed build and use instructions can be found in the [wiki](https://github.co
 
 ## General todo list
 - improve API
-- get models path automatically when running tests/examples
-- add tests
+- install + cli + get models path automatically when running tests/examples
+- set up CI + use pytest for test?
 - rework mesh generation
-- implement ROE
+- implement ROE: add MUSCL + limiters
 - use autodiff: does not support array assignment, computing jacobian is not efficient (need to resort to JVP only)
 - use jit: performance not any better than pure numpy, except if pure functional programming
 - add doc
