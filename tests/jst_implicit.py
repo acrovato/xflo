@@ -45,7 +45,9 @@ def get_cfg():
                 'c4': 2.
             }
         },
-        'Gradient': 'GreenGauss',
+        'Gradient': {
+            'Name': 'GreenGauss',
+        },
         'TimeIntegration': {
             'Name': 'ImplicitEuler',
             'Parameters': {

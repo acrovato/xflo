@@ -31,11 +31,11 @@ class PerfectGas:
 
         Parameters:
         state : np.array(float)
-            Conservative variables
+            Conservative variables (density, density momentum and density stagnation energy)
 
         Returns:
         rho, q, p : tuple(float)
-            Primitive variables
+            Primitive variables (density, velocity and pressure)
         """
         rho = state[0]
         q = state[1:3] / rho
@@ -47,11 +47,11 @@ class PerfectGas:
 
         Parameters:
         primitive : np.array(float)
-            Primitive variables
+            Primitive variables (density, velocity and pressure)
 
         Returns:
         rho, rhoq, rhoe : np.array(float)
-            Conservative variables
+            Conservative variables (density, density momentum and density stagnation energy)
         """
         rho = primitive[0]
         rhoq = rho * np.array([primitive[1], primitive[2]])
@@ -73,8 +73,40 @@ class PerfectGas:
         """
         return np.sqrt(self._g * p / rho) # c^2 = gamma*R*T
 
+    def eval_speed_sound_enthalpy(self, h, q):
+        """Evaluate speed of sound from enthalpy
+
+        Parameters:
+        h : float
+            Specific stagnation enthalpy
+        q : np.array(float)
+            Velocity
+
+        Returns:
+        c : float
+            Speed of sound
+        """
+        return np.sqrt((self._g - 1) * (h - 0.5 * q.dot(q)))
+
+    def eval_enthalpy(self, rho, q, p):
+        """Evaluate specific stagnation enthalpy
+
+        Parameters:
+        rho : float
+            Density
+        q : np.array(float)
+            Velocity
+        p : float
+            Pressure
+
+        Returns:
+        h : float
+            Specific stagnation enthalpy
+        """
+        return self._g / (self._g - 1) * p / rho + 0.5 * q.dot(q) # (rhoe + p) / rho
+
     def eval_entropy(self, rho, c):
-        """Evaluate entropy
+        """Evaluate specific entropy
 
         Parameters:
         rho : float
@@ -84,7 +116,7 @@ class PerfectGas:
 
         Returns:
         s : float
-            Entropy
+            Specific entropy
         """
         return c * c / (self._g * rho ** (self._g - 1)) # s = c^2 / (gamma * rho^(gamma-1))
 
@@ -127,7 +159,7 @@ class PerfectGas:
 
         Parameters:
         s : float
-            Entropy
+            Specific entropy
         c : float
             Speed of sound
         q : np.array(float)
@@ -135,14 +167,14 @@ class PerfectGas:
 
         Returns:
         rho, rhoe : tuple(float)
-            Density and stagnation energy
+            Density and density stagnation energy
         """
         rho = ((c * c) / (self._g * s)) ** (1 / (self._g - 1)) # rho = (c^2 / (gamma*s)) ^ 1/(gamma-1)
         p = rho * c * c / self._g # p = rho * c^2 / gamma
         rhoe = p / (self._g - 1) + 0.5 * rho * q.dot(q) # p = (gamma-1) * rho * (e0 - 1/2 q^2)
         return rho, rhoe
 
-    def compute_flux(self, rho, q, p, rhoe):
+    def compute_flux(self, rho, q, p):
         """Compute the Euler flux vector
 
         Parameters:
@@ -152,23 +184,21 @@ class PerfectGas:
             Velocity vector
         p : float
             Pressure
-        rhoe : float
-            Total energy
 
         Returns:
-        flux : np.array(float)
+        f : np.array(float)
             Flux vector
         """
-        # Get velocity components
-        u = q[0]
-        v = q[1]
+        # Pre compute common factor
+        rhoq = rho * q
+        h = self.eval_enthalpy(rho, q, p)
 
         # Compute flux
         f = np.zeros((4, 2))
-        f[0, :] = np.array([rho * u, rho * v]) # [rho*u, rho*v]
-        f[1, :] = np.array([rho * u * u + p, rho * u * v]) # [rho*u*u+p, rho*u*v]
-        f[2, :] = np.array([rho * u * v, rho * v * v + p]) # [rho*u*v, rho*v*v+p]
-        f[3, :] = np.array([(rhoe + p) * u, (rhoe + p) * v]) # [(rho*e0+p)*u, (rho*e0+p)*v]
+        f[0, :] = np.array([rhoq[0], rhoq[1]]) # [rho*u, rho*v]
+        f[1, :] = np.array([rhoq[0] * q[0] + p, rhoq[1] * q[0]]) # [rho*u*u+p, rho*u*v]
+        f[2, :] = np.array([rhoq[0] * q[1], rhoq[1] * q[1] + p]) # [rho*u*v, rho*v*v+p]
+        f[3, :] = np.array([rhoq[0] * h, rhoq[1] * h]) # [(rho*e0+p)*u, (rho*e0+p)*v]
         return f
 
     def compute_eigen_decomposition(self, rho, q, c, n):

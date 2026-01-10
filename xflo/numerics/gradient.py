@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from .limiter import Limiter
+from xflo.utils.error import XFloNotImplemented
 import numpy as np
 
 class Gradient:
@@ -22,27 +24,32 @@ class Gradient:
     Attributes:
     _pbl : xflo.structure.problem.Problem
         Problem definition
+    _lim : xflo.numerics.limiter.Limiter
+        Limiter calculation
     _states : np.array(float)
         Conservative variables vector at edges
     _grads : np.array(float)
         Gradient of conservative variables vector
     """
-    def __init__(self, problem):
+    def __init__(self, problem, limiter=None):
         self._pbl = problem
+        self._lim = limiter if limiter is not None else Limiter(problem)
         self._states = np.zeros(problem.mesh.get_nedges() * problem.get_nukn(), dtype=float)
         self._grads = np.zeros((problem.mesh.get_ncells() * problem.get_nukn(), 2), dtype=float)
 
     def compute(self, states):
-        """Compute gradients at cells centers
+        """Compute limited gradients at cells centers
 
         Parameters:
         states : np.array(float)
             Conservative variables vector
 
         Returns:
-        self._grad : np.array(float)
+        _grads : np.array(float)
             Gradient of conservative variables vector
         """
+        self._compute_gradients(states)
+        self._grads *= self._lim.compute(states, self._grads)[:, np.newaxis]
         return self._grads
 
     def _compute_flux(self, state, n, l):
@@ -60,4 +67,13 @@ class Gradient:
         flux : np.array(float)
             Integral of edge state multiplied by the normal vector
         """
-        return state[:, None] * np.tile(n, (self._pbl.get_nukn(), 1)) * l
+        return state[:, np.newaxis] * np.tile(n, (self._pbl.get_nukn(), 1)) * l
+
+    def _compute_gradients(self, states):
+        """Actual implementation to compute gradients
+
+        Parameters:
+        states : np.array(float)
+            Conservative variables vector
+        """
+        pass

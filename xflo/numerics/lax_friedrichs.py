@@ -28,7 +28,7 @@ class LaxFriedrichs(Flux):
 
         # Compute primitives, Euler flux and wavespeed
         rho, q, p = self._flu.eval_primitive(s)
-        f = self._flu.compute_flux(rho, q, p, s[3])
+        f = self._flu.compute_flux(rho, q, p)
         a = abs(q.dot(n)) + self._flu.eval_speed_sound(rho, p)
 
         # Compute LF flux

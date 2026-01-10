@@ -19,7 +19,7 @@ from .gradient import Gradient
 class GreenGauss(Gradient):
     """Green-Gauss method to compute the gradients
     """
-    def compute(self, states):
+    def _compute_gradients(self, states):
         # Get the edge to cell connectivity and the cells area
         ecids = self._pbl.mesh.get_edges_cells()
         carea = self._pbl.mesh.get_cells_area()
@@ -56,5 +56,3 @@ class GreenGauss(Gradient):
             flux = self._compute_flux(self._states[esid], nrms[i_edge], lgts[i_edge])
             self._grads[csid0, :] -= flux / carea[ecids[eid][0]] # cell owning the edge has inward normal
             self._grads[csid1, :] += flux / carea[ecids[eid][1]] # neighboor cell has outward normal
-
-        return self._grads

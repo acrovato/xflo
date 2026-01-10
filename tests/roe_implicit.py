@@ -40,15 +40,24 @@ def get_cfg():
         'Scheme': {
             'Name': 'Roe',
             'Parameters': {
-                'EntropyFix': 1e-6
+                'EntropyFix': 5e-1
+            }
+        },
+        'Gradient': {
+            'Name': 'GreenGauss',
+            'Limiter': {
+                'Name': 'Venkatakrishnan',
+                'Parameters': {
+                    'Coefficient': 5.0
+                }
             }
         },
         'TimeIntegration': {
             'Name': 'ImplicitEuler',
             'Parameters': {
-                'CflInitial': 10.0,
+                'CflInitial': 100.0,
                 'CflExponent': 0.7,
-                'RelativeTolerance': 1e-6,
+                'RelativeTolerance': 1e-4,
                 'MaxNoIterations': 200,
                 'SaveFrequency': 10
             },
@@ -73,9 +82,9 @@ def main():
 
     # TODO add tests
     assert status.value == 0
-    assert bdy.get_lift_coef() == 0.2484
-    assert bdy.get_drag_coef() == 0.0357
-    assert bdy.get_pitch_coef() == -0.0136
+    assert bdy.get_lift_coef() == 0.3530
+    assert bdy.get_drag_coef() == 0.0013
+    assert bdy.get_pitch_coef() == 0.0001
 
 if __name__ == '__main__':
     main()

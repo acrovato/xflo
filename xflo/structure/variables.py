@@ -28,22 +28,24 @@ class Variables:
         Velocity in y direction
     _p : np.array(float)
         Pressure
-    c : np.array(float)
+    _c : np.array(float)
         Speed of sound
-    s : np.array(float)
+    _s : np.array(float)
         Entropy
-    mach : np.array(float)
+    _mach : np.array(float)
         Mach number
-    cp : np.array(float)
+    _cp : np.array(float)
         Pressure coefficient
-    res_rho : np.array(float)
+    _res_rho : np.array(float)
         Density residuals
-    res_u : np.array(float)
+    _res_u : np.array(float)
         Momentum in x direction residuals
-    res_v : np.array(float)
+    _res_v : np.array(float)
         Momentum in y direction residuals
-    res_e : np.array(float)
+    _res_e : np.array(float)
         Energy residuals
+    _map : dict(str, np.array(float))
+        Map between variables name and values
     """
     def __init__(self, nrows):
         # Primitive variables

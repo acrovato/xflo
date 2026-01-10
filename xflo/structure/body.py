@@ -18,7 +18,6 @@ import numpy as np
 
 class Body:
     """Body which will be monitored
-    TODO interpolate mach, cp and coords at nodes
 
     Attributes:
     _name : str

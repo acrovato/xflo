@@ -19,7 +19,7 @@ from .flux import Flux
 class JST(Flux):
     """Jameson-Schmidt-Turkel flux formulation
     The Origins and Further Development of the Jameson-Schmidt-Turkel (JST) Scheme, A. Jameson,
-    AIAA Journal, Volume 55(5) May 2017,
+    AIAA Journal, Volume 55(5), May 2017,
     http://aero-comlab.stanford.edu/Papers/jst_2015_updated_07_03_2015.pdf
 
     Attributes:
@@ -40,7 +40,7 @@ class JST(Flux):
         # Compute central flux and average wavespeed
         s = 0.5 * (s0 + s1)
         rho, q, p = self._flu.eval_primitive(s)
-        f = self._flu.compute_flux(rho, q, p, s[3])
+        f = self._flu.compute_flux(rho, q, p)
         a = abs(q.dot(n)) + self._flu.eval_speed_sound(rho, p)
 
         # Compute state difference (since the normal is inward wrt cell 0, signs are reversed compared to the reference paper)

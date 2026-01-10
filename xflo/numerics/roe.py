@@ -19,8 +19,9 @@ import numpy as np
 
 class Roe(Flux):
     """Roe flux formulation
-    TODO ref
-    TODO limiter + MUSCL?
+    Riemann Solvers and Numerical Methods for Fluid Dynamics, E.F. Toro,
+    Springer, 2009
+    https://link.springer.com/book/10.1007/b79761
 
     Attributes:
     _efix : float
@@ -31,13 +32,19 @@ class Roe(Flux):
         super().__init__(fluid)
 
     def compute_residual(self, s0, s1, ds0, ds1, n, l, d):
-        # Compute left/right primitives
+        # Reconstruct left/right states
+        s0 = s0 - ds0.dot(n) * 0.5 * d
+        s1 = s1 + ds1.dot(n) * 0.5 * d
+
+        # Compute left/right primitives and enthalpy
         rho0, q0, p0 = self._flu.eval_primitive(s0)
         rho1, q1, p1 = self._flu.eval_primitive(s1)
+        h0 = self._flu.eval_enthalpy(rho0, q0, p0)
+        h1 = self._flu.eval_enthalpy(rho1, q1, p1)
 
         # Compute left/right fluxes
-        f0 = self._flu.compute_flux(rho0, q0, p0, s0[3])
-        f1 = self._flu.compute_flux(rho1, q1, p1, s1[3])
+        f0 = self._flu.compute_flux(rho0, q0, p0)
+        f1 = self._flu.compute_flux(rho1, q1, p1)
         f = 0.5 * (f0 + f1)
 
         # Compute Roe-averaged variables
@@ -45,8 +52,8 @@ class Roe(Flux):
         z1 = np.sqrt(rho1)
         roe_rho = z0 * z1
         roe_q = (z0 * q0 + z1 * q1) / (z0 + z1)
-        roe_p = (z0 * p0 + z1 * p1) / (z0 + z1) # average pressure instead of enthalpy
-        roe_c = self._flu.eval_speed_sound(roe_rho, roe_p)
+        roe_h = (z0 * h0 + z1 * h1) / (z0 + z1)
+        roe_c = self._flu.eval_speed_sound_enthalpy(roe_h, roe_q)
 
         # Compute eigenvalues and eigenvectors
         lam, eig_mat, eig_imat = self._flu.compute_eigen_decomposition(roe_rho, roe_q, roe_c, n)

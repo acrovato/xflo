@@ -61,12 +61,12 @@ def init_xflo(cfg):
     pbl.set_geometry(c_ref, x_ref, z_ref)
 
     # Create spatial discretization scheme
-    flux = _select_flux(cfg, fluid)
-    grad = _select_grad(cfg, pbl)
+    flux = _select_flux(cfg['Scheme'], fluid)
+    grad = _select_gradient(cfg.get('Gradient', {}), pbl)
     disc = FiniteVolume(pbl, flux, grad)
 
     # Create time integration method
-    tsol = _select_time_integration(cfg, disc, wrt)
+    tsol = _select_time_integration(cfg['TimeIntegration'], disc, wrt)
 
     # Return objects
     return {
@@ -77,67 +77,81 @@ def init_xflo(cfg):
 
 def _select_flux(cfg, fluid):
     """Select numerical scheme to calculate the convective flux"""
-    method = cfg['Scheme']['Name']
+    method = cfg['Name']
     if method == 'LaxFriedrichs':
         from xflo.numerics.lax_friedrichs import LaxFriedrichs
         return LaxFriedrichs(fluid)
     elif method == 'JST':
         from xflo.numerics.jst import JST
-        k2 = cfg['Scheme']['Parameters'].get('k2', 1.)
-        k4 = cfg['Scheme']['Parameters'].get('k4', 1./32.)
-        c4 = cfg['Scheme']['Parameters'].get('c4', 2.)
+        k2 = cfg['Parameters'].get('k2', 1.)
+        k4 = cfg['Parameters'].get('k4', 1./32.)
+        c4 = cfg['Parameters'].get('c4', 2.)
         return JST(fluid, k2, k4, c4)
     elif method == 'Roe':
         from xflo.numerics.roe import Roe
-        efix = cfg['Scheme']['Parameters'].get('EntropyFix', 1e-6)
+        efix = cfg['Parameters'].get('EntropyFix', 1e-6)
         return Roe(fluid, efix)
     else:
-        raise XFloRuntimeError('Convective scheme not available. Choose between: LaxFriedrichs, JST.')
+        raise XFloRuntimeError('Convective scheme not available. Choose between: "LaxFriedrichs", "JST", "Roe".')
 
-def _select_grad(cfg, pbl):
-    """Select numerical method to reconstruct the gradients"""
-    method = cfg.get('Gradient')
+def _select_limiter(cfg, pbl):
+    """Select method to limit the gradients"""
+    method = cfg.get('Name')
     if method is None:
         return None
-    elif method == 'GreenGauss':
-        from xflo.numerics.green_gauss import GreenGauss
-        return GreenGauss(pbl)
+    elif method == 'Venkatakrishnan':
+        from xflo.numerics.venkatakrishnan import Venkatakrishnan
+        k = cfg.get('Parameters', {}).get('Coefficient', 5.0)
+        return Venkatakrishnan(pbl, k)
     else:
-        raise XFloRuntimeError('Gradient reconstruction method not available. Choose between: None, GreenGauss.')
+        raise XFloRuntimeError('Limiter not available. Choose between: None, "Venkatakrishnan".')
+
+def _select_gradient(cfg, pbl):
+    """Select numerical method to reconstruct the gradients"""
+    method = cfg.get('Name')
+    if method is None:
+        return None
+    else:
+        lim = _select_limiter(cfg.get('Limiter', {}), pbl)
+        if method == 'GreenGauss':
+            from xflo.numerics.green_gauss import GreenGauss
+            return GreenGauss(pbl, lim)
+        else:
+            raise XFloRuntimeError('Gradient reconstruction method not available. Choose between: None, "GreenGauss".')
 
 def _select_time_integration(cfg, disc, wrt):
     """Select time integration method"""
-    method = cfg['TimeIntegration']['Name']
+    method = cfg['Name']
     if method == 'ExplicitEuler':
-        icfl = cfg['TimeIntegration']['Parameters'].get('CflInitial', 1.0)
-        rtol = cfg['TimeIntegration']['Parameters'].get('RelativeTolerance', 1e-6)
-        mxit = cfg['TimeIntegration']['Parameters'].get('MaxNoIterations', 1000)
-        sfrq = cfg['TimeIntegration']['Parameters'].get('SaveFrequency', 100)
+        icfl = cfg['Parameters'].get('CflInitial', 1.0)
+        rtol = cfg['Parameters'].get('RelativeTolerance', 1e-6)
+        mxit = cfg['Parameters'].get('MaxNoIterations', 1000)
+        sfrq = cfg['Parameters'].get('SaveFrequency', 100)
         from xflo.numerics.explicit_runge_kutta import ExplicitEuler
         return ExplicitEuler(disc, wrt, icfl, rtol, mxit, sfrq)
     elif method == 'ExplicitRungeKutta4':
-        icfl = cfg['TimeIntegration']['Parameters'].get('CflInitial', 1.0)
-        rtol = cfg['TimeIntegration']['Parameters'].get('RelativeTolerance', 1e-6)
-        mxit = cfg['TimeIntegration']['Parameters'].get('MaxNoIterations', 1000)
-        sfrq = cfg['TimeIntegration']['Parameters'].get('SaveFrequency', 100)
+        icfl = cfg['Parameters'].get('CflInitial', 1.0)
+        rtol = cfg['Parameters'].get('RelativeTolerance', 1e-6)
+        mxit = cfg['Parameters'].get('MaxNoIterations', 1000)
+        sfrq = cfg['Parameters'].get('SaveFrequency', 100)
         from xflo.numerics.explicit_runge_kutta import ExplicitRk4
         return ExplicitRk4(disc, wrt, icfl, rtol, mxit, sfrq)
     elif method == 'ImplicitEuler':
-        icfl = cfg['TimeIntegration']['Parameters'].get('CflInitial', 1.0)
-        ecfl = cfg['TimeIntegration']['Parameters'].get('CflExponent', 0.7)
-        rtol = cfg['TimeIntegration']['Parameters'].get('RelativeTolerance', 1e-6)
-        mxit = cfg['TimeIntegration']['Parameters'].get('MaxNoIterations', 100)
-        sfrq = cfg['TimeIntegration']['Parameters'].get('SaveFrequency', 10)
+        icfl = cfg['Parameters'].get('CflInitial', 1.0)
+        ecfl = cfg['Parameters'].get('CflExponent', 0.7)
+        rtol = cfg['Parameters'].get('RelativeTolerance', 1e-6)
+        mxit = cfg['Parameters'].get('MaxNoIterations', 100)
+        sfrq = cfg['Parameters'].get('SaveFrequency', 10)
         from xflo.numerics.implicit_euler import ImplicitEuler
         sol = ImplicitEuler(disc, wrt, icfl, ecfl, rtol, mxit, sfrq)
-        rtol = cfg['TimeIntegration']['InnerSolver'].get('RelativeTolerance', 1e-3)
-        atol = cfg['TimeIntegration']['InnerSolver'].get('AbsoluteTolerance', 1e-5)
-        mxit = cfg['TimeIntegration']['InnerSolver'].get('MaxNoIterations', 10)
-        nrst = cfg['TimeIntegration']['InnerSolver'].get('NoRestart', 20)
-        dtol = cfg['TimeIntegration']['InnerSolver'].get('DropTolerance', 1e-6)
-        ffct = cfg['TimeIntegration']['InnerSolver'].get('FillFactor', 20.)
+        rtol = cfg['InnerSolver'].get('RelativeTolerance', 1e-3)
+        atol = cfg['InnerSolver'].get('AbsoluteTolerance', 1e-5)
+        mxit = cfg['InnerSolver'].get('MaxNoIterations', 10)
+        nrst = cfg['InnerSolver'].get('NoRestart', 20)
+        dtol = cfg['InnerSolver'].get('DropTolerance', 1e-6)
+        ffct = cfg['InnerSolver'].get('FillFactor', 20.)
         sol.set_solver_parameters(rtol, atol, mxit, nrst)
         sol.set_preconditioner_parameters(dtol, ffct)
         return sol
     else:
-        raise XFloRuntimeError('Time integration method not available. Choose between: ExplicitEuler, ExplicitRungeKutta4, ImplicitEuler.')
+        raise XFloRuntimeError('Time integration method not available. Choose between: "ExplicitEuler", "ExplicitRungeKutta4", "ImplicitEuler".')
