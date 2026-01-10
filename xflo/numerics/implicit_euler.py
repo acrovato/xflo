@@ -74,7 +74,7 @@ class ImplicitEuler(TimeIntegration):
         self._pdrop = drop_tol
         self._pfill = fill_factor
 
-    def update_solution(self):
+    def _update_solution(self):
         # Get states and residuals
         s = self._disc.get_states()
         r = self._disc.get_residuals()

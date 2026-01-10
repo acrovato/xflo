@@ -45,7 +45,7 @@ def get_cfg():
             'Parameters': {
                 'CflInitial': 0.25,
                 'RelativeTolerance': 1e-2,
-                'MaxNoIterations': 2000,
+                'MaxNumIterations': 2000,
                 'SaveFrequency': 100
             }
         }
@@ -61,6 +61,7 @@ def main():
 
     # TODO add tests
     assert status.value == 0
+    assert sol.get_num_iterations() == 1030
     assert bdy.get_lift_coef() == 0.1601
     assert bdy.get_drag_coef() == 0.0739
     assert bdy.get_pitch_coef() == -0.0222

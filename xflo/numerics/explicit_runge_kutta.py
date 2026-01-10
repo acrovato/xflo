@@ -48,7 +48,7 @@ class ExplicitRungeKutta(TimeIntegration):
         self._b = b
         self._nstages = len(b)
 
-    def update_solution(self):
+    def _update_solution(self):
         # Get solution and residuals, and compute time step
         s0 = self._disc.get_states()
         r = [None] * self._nstages

@@ -46,13 +46,13 @@ def get_cfg():
                 'CflInitial': 10.0,
                 'CflExponent': 0.7,
                 'RelativeTolerance': 1e-6,
-                'MaxNoIterations': 100,
+                'MaxNumIterations': 100,
                 'SaveFrequency': 10
             },
             'InnerSolver': {
                 'RelativeTolerance': 1e-3,
                 'AbsoluteTolerance': 1e-5,
-                'MaxNoIterations': 10,
+                'MaxNumIterations': 10,
                 'NoRestart': 20,
                 'DropTolerance': 1e-6,
                 'FillFactor': 20,
@@ -70,6 +70,7 @@ def main():
 
     # TODO add tests
     assert status.value == 0
+    assert sol.get_num_iterations() == 9
     assert bdy.get_lift_coef() == 0.1630
     assert bdy.get_drag_coef() == 0.0740
     assert bdy.get_pitch_coef() == -0.0223

@@ -125,14 +125,14 @@ def _select_time_integration(cfg, disc, wrt):
     if method == 'ExplicitEuler':
         icfl = cfg['Parameters'].get('CflInitial', 1.0)
         rtol = cfg['Parameters'].get('RelativeTolerance', 1e-6)
-        mxit = cfg['Parameters'].get('MaxNoIterations', 1000)
+        mxit = cfg['Parameters'].get('MaxNumIterations', 1000)
         sfrq = cfg['Parameters'].get('SaveFrequency', 100)
         from xflo.numerics.explicit_runge_kutta import ExplicitEuler
         return ExplicitEuler(disc, wrt, icfl, rtol, mxit, sfrq)
     elif method == 'ExplicitRungeKutta4':
         icfl = cfg['Parameters'].get('CflInitial', 1.0)
         rtol = cfg['Parameters'].get('RelativeTolerance', 1e-6)
-        mxit = cfg['Parameters'].get('MaxNoIterations', 1000)
+        mxit = cfg['Parameters'].get('MaxNumIterations', 1000)
         sfrq = cfg['Parameters'].get('SaveFrequency', 100)
         from xflo.numerics.explicit_runge_kutta import ExplicitRk4
         return ExplicitRk4(disc, wrt, icfl, rtol, mxit, sfrq)
@@ -140,13 +140,13 @@ def _select_time_integration(cfg, disc, wrt):
         icfl = cfg['Parameters'].get('CflInitial', 1.0)
         ecfl = cfg['Parameters'].get('CflExponent', 0.7)
         rtol = cfg['Parameters'].get('RelativeTolerance', 1e-6)
-        mxit = cfg['Parameters'].get('MaxNoIterations', 100)
+        mxit = cfg['Parameters'].get('MaxNumIterations', 100)
         sfrq = cfg['Parameters'].get('SaveFrequency', 10)
         from xflo.numerics.implicit_euler import ImplicitEuler
         sol = ImplicitEuler(disc, wrt, icfl, ecfl, rtol, mxit, sfrq)
         rtol = cfg['InnerSolver'].get('RelativeTolerance', 1e-3)
         atol = cfg['InnerSolver'].get('AbsoluteTolerance', 1e-5)
-        mxit = cfg['InnerSolver'].get('MaxNoIterations', 10)
+        mxit = cfg['InnerSolver'].get('MaxNumIterations', 10)
         nrst = cfg['InnerSolver'].get('NoRestart', 20)
         dtol = cfg['InnerSolver'].get('DropTolerance', 1e-6)
         ffct = cfg['InnerSolver'].get('FillFactor', 20.)
