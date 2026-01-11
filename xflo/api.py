@@ -91,8 +91,14 @@ def _select_flux(cfg, fluid):
         from xflo.numerics.roe import Roe
         efix = cfg['Parameters'].get('EntropyFix', 1e-6)
         return Roe(fluid, efix)
+    elif method == 'HLL':
+        from xflo.numerics.hll import HLL
+        return HLL(fluid)
+    elif method == 'HLLC':
+        from xflo.numerics.hllc import HLLC
+        return HLLC(fluid)
     else:
-        raise XFloRuntimeError('Convective scheme not available. Choose between: "LaxFriedrichs", "JST", "Roe".')
+        raise XFloRuntimeError('Convective scheme not available. Choose between: "LaxFriedrichs", "JST", "Roe", "HLL", "HLLC".')
 
 def _select_limiter(cfg, pbl):
     """Select method to limit the gradients"""

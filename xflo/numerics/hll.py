@@ -17,48 +17,46 @@
 from .flux import Flux
 import numpy as np
 
-class Roe(Flux):
-    """Roe flux formulation
+class HLL(Flux):
+    """Harten-Lax-van Leer flux formulation
     Riemann Solvers and Numerical Methods for Fluid Dynamics, E.F. Toro,
     Springer, 2009
     https://link.springer.com/book/10.1007/b79761
-
-    Attributes:
-    _efix : float
-        Entropy fix coefficient
     """
-    def __init__(self, fluid, entropy_fix=1e-6):
-        self._efix = entropy_fix
-        super().__init__(fluid)
-
     def compute_residual(self, s0, s1, ds0, ds1, n, l, d):
         # Reconstruct left/right states (since the normal is inward wrt cell 0, 0 is right and 1 is left)
         s0 = s0 - ds0.dot(n) * 0.5 * d
         s1 = s1 + ds1.dot(n) * 0.5 * d
 
-        # Compute left/right primitives and enthalpy
+        # Compute left/right primitives, speed of sound and enthalpy
         rho0, q0, p0 = self._flu.eval_primitive(s0)
         rho1, q1, p1 = self._flu.eval_primitive(s1)
+        c0 = self._flu.eval_speed_sound(rho0, p0)
+        c1 = self._flu.eval_speed_sound(rho1, p1)
         h0 = self._flu.eval_enthalpy(rho0, q0, p0)
         h1 = self._flu.eval_enthalpy(rho1, q1, p1)
 
         # Compute left/right fluxes
         f0 = self._flu.compute_flux(rho0, q0, p0)
         f1 = self._flu.compute_flux(rho1, q1, p1)
-        f = 0.5 * (f0 + f1)
 
         # Compute Roe's averaged variables
         z0 = np.sqrt(rho0)
         z1 = np.sqrt(rho1)
-        roe_rho = z0 * z1
         roe_q = (z0 * q0 + z1 * q1) / (z0 + z1)
         roe_h = (z0 * h0 + z1 * h1) / (z0 + z1)
         roe_c = self._flu.eval_speed_sound_enthalpy(roe_h, roe_q)
 
-        # Compute eigenvalues and eigenvectors
-        lam, eig_mat, eig_imat = self._flu.compute_eigen_decomposition(roe_rho, roe_q, roe_c, n)
-        lam = np.maximum(np.abs(lam), self._efix * max(np.abs(lam))) # fix eigenvalues to avoid expansion shocks
+        # Compute projected velocities and signal speeds
+        qn0 = q0.dot(n)
+        qn1 = q1.dot(n)
+        a0 = max(qn0 + c0, roe_q.dot(n) + roe_c)
+        a1 = min(qn1 - c1, roe_q.dot(n) - roe_c)
 
-        # Compute ROE flux
-        jac = eig_mat @ np.diag(lam) @ eig_imat
-        return (f.dot(n) - 0.5 * jac.dot(s0 - s1)) * l
+        # Compute HLL flux
+        if a1 > 0.:
+            return f1.dot(n) * l
+        elif a0 < 0.:
+            return f0.dot(n) * l
+        else:
+            return (((a0 * f1 - a1 * f0).dot(n) + a1 * a0 * (s0 - s1)) / (a0 - a1)) * l
