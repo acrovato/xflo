@@ -153,7 +153,7 @@ def _select_time_integration(cfg, disc, wrt):
         rtol = cfg['InnerSolver'].get('RelativeTolerance', 1e-3)
         atol = cfg['InnerSolver'].get('AbsoluteTolerance', 1e-5)
         mxit = cfg['InnerSolver'].get('MaxNumIterations', 10)
-        nrst = cfg['InnerSolver'].get('NoRestart', 20)
+        nrst = cfg['InnerSolver'].get('NumRestart', 20)
         dtol = cfg['InnerSolver'].get('DropTolerance', 1e-6)
         ffct = cfg['InnerSolver'].get('FillFactor', 20.)
         sol.set_solver_parameters(rtol, atol, mxit, nrst)

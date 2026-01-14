@@ -62,7 +62,7 @@ def get_cfg():
                 'RelativeTolerance': 1e-3,
                 'AbsoluteTolerance': 1e-5,
                 'MaxNumIterations': 10,
-                'NoRestart': 40,
+                'NumRestart': 40,
                 'DropTolerance': 1e-6,
                 'FillFactor': 20,
             }
