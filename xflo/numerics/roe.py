@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .flux import Flux
+from .riemann import Riemann
 import numpy as np
 
-class Roe(Flux):
+class Roe(Riemann):
     """Roe flux formulation
     Riemann Solvers and Numerical Methods for Fluid Dynamics, E.F. Toro,
     Springer, 2009
@@ -32,33 +32,20 @@ class Roe(Flux):
         super().__init__(fluid)
 
     def compute_residual(self, s0, s1, ds0, ds1, n, l, d):
-        # Reconstruct left/right states (since the normal is inward wrt cell 0, 0 is right and 1 is left)
-        s0 = s0 - ds0.dot(n) * 0.5 * d
-        s1 = s1 + ds1.dot(n) * 0.5 * d
+        # Reconstruct left/right states
+        s0, s1 = self._reconstruct_states(s0, s1, ds0, ds1, n, d)
 
-        # Compute left/right primitives and enthalpy
-        rho0, q0, p0 = self._flu.eval_primitive(s0)
-        rho1, q1, p1 = self._flu.eval_primitive(s1)
-        h0 = self._flu.eval_enthalpy(rho0, q0, p0)
-        h1 = self._flu.eval_enthalpy(rho1, q1, p1)
-
-        # Compute left/right fluxes
-        f0 = self._flu.compute_flux(rho0, q0, p0)
-        f1 = self._flu.compute_flux(rho1, q1, p1)
-        f = 0.5 * (f0 + f1)
+        # Compute left/right primitives, enthalpy and fluxes
+        rho0, q0, _, _, h0, f0 = self._eval_vars_flux(s0)
+        rho1, q1, _, _, h1, f1 = self._eval_vars_flux(s1)
 
         # Compute Roe's averaged variables
-        z0 = np.sqrt(rho0)
-        z1 = np.sqrt(rho1)
-        roe_rho = z0 * z1
-        roe_q = (z0 * q0 + z1 * q1) / (z0 + z1)
-        roe_h = (z0 * h0 + z1 * h1) / (z0 + z1)
-        roe_c = self._flu.eval_speed_sound_enthalpy(roe_h, roe_q)
+        roe_rho, roe_q, roe_c = self._eval_roe_average(rho0, rho1, q0, q1, h0, h1)
 
         # Compute eigenvalues and eigenvectors
         lam, eig_mat, eig_imat = self._flu.compute_eigen_decomposition(roe_rho, roe_q, roe_c, n)
         lam = np.maximum(np.abs(lam), self._efix * max(np.abs(lam))) # fix eigenvalues to avoid expansion shocks
 
-        # Compute ROE flux
+        # Compute Roe's flux
         jac = eig_mat @ np.diag(lam) @ eig_imat
-        return (f.dot(n) - 0.5 * jac.dot(s0 - s1)) * l
+        return 0.5 * ((f0 + f1).dot(n) - jac.dot(s0 - s1)) * l

@@ -14,38 +14,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .flux import Flux
-import numpy as np
+from .riemann import Riemann
 
-class HLL(Flux):
+class HLL(Riemann):
     """Harten-Lax-van Leer flux formulation
     Riemann Solvers and Numerical Methods for Fluid Dynamics, E.F. Toro,
     Springer, 2009
     https://link.springer.com/book/10.1007/b79761
     """
     def compute_residual(self, s0, s1, ds0, ds1, n, l, d):
-        # Reconstruct left/right states (since the normal is inward wrt cell 0, 0 is right and 1 is left)
-        s0 = s0 - ds0.dot(n) * 0.5 * d
-        s1 = s1 + ds1.dot(n) * 0.5 * d
+        # Reconstruct left/right states
+        s0, s1 = self._reconstruct_states(s0, s1, ds0, ds1, n, d)
 
-        # Compute left/right primitives, speed of sound and enthalpy
-        rho0, q0, p0 = self._flu.eval_primitive(s0)
-        rho1, q1, p1 = self._flu.eval_primitive(s1)
-        c0 = self._flu.eval_speed_sound(rho0, p0)
-        c1 = self._flu.eval_speed_sound(rho1, p1)
-        h0 = self._flu.eval_enthalpy(rho0, q0, p0)
-        h1 = self._flu.eval_enthalpy(rho1, q1, p1)
-
-        # Compute left/right fluxes
-        f0 = self._flu.compute_flux(rho0, q0, p0)
-        f1 = self._flu.compute_flux(rho1, q1, p1)
+        # Compute left/right primitives, enthalpy and fluxes
+        rho0, q0, _, c0, h0, f0 = self._eval_vars_flux(s0)
+        rho1, q1, _, c1, h1, f1 = self._eval_vars_flux(s1)
 
         # Compute Roe's averaged variables
-        z0 = np.sqrt(rho0)
-        z1 = np.sqrt(rho1)
-        roe_q = (z0 * q0 + z1 * q1) / (z0 + z1)
-        roe_h = (z0 * h0 + z1 * h1) / (z0 + z1)
-        roe_c = self._flu.eval_speed_sound_enthalpy(roe_h, roe_q)
+        _, roe_q, roe_c = self._eval_roe_average(rho0, rho1, q0, q1, h0, h1)
 
         # Compute projected velocities and signal speeds
         qn0 = q0.dot(n)
