@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from xflo.utils.log import logger
+from xflo.utils.log import logger_interface
 import vtk
 
 class VtkWriter():
@@ -95,5 +95,5 @@ class VtkWriter():
         nit = '' if nit is None else '_{0:04d}'.format(nit)
         fname = f'{self._name}{nit}.vtu'
         self._writer.SetFileName(fname)
-        logger.info(f'Writing file: {fname}')
+        logger_interface.get().info(f'Writing file: {fname}')
         self._writer.Write()

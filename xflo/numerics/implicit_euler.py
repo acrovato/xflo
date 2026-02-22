@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .time_integration import TimeIntegration
-from xflo.utils.log import logger
+from xflo.utils.log import logger_interface
 import numpy as np
 from scipy.sparse.linalg import gmres, spilu, LinearOperator
 
@@ -91,7 +91,7 @@ class ImplicitEuler(TimeIntegration):
         # Solve linear set of equations
         ds, info = gmres(j, -r, x0=s, rtol=self._irtol, atol=self._iatol, restart=self._rstrt, maxiter=self._imxit, M=m)
         if info > 0:
-            logger.warning('Maximum number of iterations exceeded in GMRES solver.')
+            logger_interface.get().warning('Maximum number of iterations exceeded in GMRES solver.')
 
         # Update solution
         self._disc.update(s + ds, update_jac=True)

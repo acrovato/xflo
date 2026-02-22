@@ -14,26 +14,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .log import logger
+from .log import logger_interface
 
 class XFloError(Exception):
     """Log exception and raise
     """
     def __init__(self, message):
-        logger.exception(message)
+        logger_interface.get().exception(message)
         super().__init__(message)
 
 class XFloRuntimeError(RuntimeError):
     def __init__(self, message):
-        logger.exception(message)
+        logger_interface.get().exception(message)
         super().__init__(message)
 
 class XFloNotImplemented(NotImplementedError):
     def __init__(self, message):
-        logger.exception(message)
+        logger_interface.get().exception(message)
         super().__init__(message)
 
 class XFloFileNotFound(FileNotFoundError):
     def __init__(self, message):
-        logger.exception(message)
+        logger_interface.get().exception(message)
         super().__init__(message)

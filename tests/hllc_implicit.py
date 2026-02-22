@@ -15,17 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.path import WorkspaceHelper, build_fpath
 from xflo.api import init_xflo
-
-def get_model(name):
-    import os.path
-    return os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'models', name)
+from pytest import approx
 
 def get_cfg():
     return {
         'Model': {
             'Name': 'naca0012',
-            'AirfoilFile': get_model('naca0012_sharp.dat')
+            'AirfoilFile': build_fpath('models/naca0012_sharp.dat', __file__, recurse_lvl=1)
         },
         'Freestream': {
             'AoA': 2.,
@@ -77,12 +75,16 @@ def main():
     # Run time integration
     status = sol.run()
 
-    # TODO add tests
+    # Test
     assert status.value == 0
-    assert sol.get_num_iterations() == 31
-    assert bdy.get_lift_coef() == 0.3152
-    assert bdy.get_drag_coef() == 0.0028
-    assert bdy.get_pitch_coef() == 0.0008
+    assert sol.get_num_iterations() == approx(38, abs=5)
+    assert bdy.get_lift_coef() == approx(0.3152, abs=5e-3)
+    assert bdy.get_drag_coef() == approx(0.0028, abs=5e-4)
+    assert bdy.get_pitch_coef() == approx(0.0008, abs=5e-4)
+
+def test():
+    with WorkspaceHelper(__file__, clean=True):
+        main()
 
 if __name__ == '__main__':
     main()

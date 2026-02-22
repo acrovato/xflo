@@ -18,7 +18,7 @@ from xflo.boundary.riemann_invariant import RiemannInvariant
 from xflo.boundary.slip_wall import SlipWall
 from xflo.structure.body import Body
 from xflo.structure.variables import Variables
-from xflo.utils.log import logger
+from xflo.utils.log import logger_interface
 import numpy as np
 
 class Problem:
@@ -149,7 +149,7 @@ class Problem:
         name : str
             Name of the physical group on which the boundary condition is defined
         """
-        logger.info(f'Setting farfield boundary condition on boundary: {name}')
+        logger_interface.get().info(f'Setting farfield boundary condition on boundary: {name}')
         # Set BC on farfield
         self._far = RiemannInvariant(self._flu, name)
 
@@ -164,7 +164,7 @@ class Problem:
         body : xflo.structure.body.Body
             Body associated to wall boundary conditon which will be monitored
         """
-        logger.info(f'Setting slip wall boundary condition on boundary: {name}')
+        logger_interface.get().info(f'Setting slip wall boundary condition on boundary: {name}')
         # Set BC on body and monitor body
         self._wal.append(SlipWall(self._flu, name))
         self._bdy.append(Body(name, self.mesh))
@@ -183,6 +183,7 @@ class Problem:
         p : float
             Pressure
         """
+        logger = logger_interface.get()
         logger.info('Setting freestream:')
         logger.info(f'- angle of attack: {aoa} deg')
         logger.info(f'- mach number: {mach}')
@@ -206,6 +207,7 @@ class Problem:
         y_ref : float
             y-coordinate of reference center
         """
+        logger = logger_interface.get()
         logger.info('Setting reference geometry:')
         logger.info(f'- chord length: {c_ref} m')
         logger.info(f'- center point: [{x_ref}, {y_ref}] m')

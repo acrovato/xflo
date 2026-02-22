@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from xflo.utils.log import logger
+from xflo.utils.log import logger_interface
 from xflo.utils.error import XFloNotImplemented
 import numpy as np
 import enum, time
@@ -70,6 +70,7 @@ class TimeIntegration:
             Solver status
         """
         # Set initial condition
+        logger = logger_interface.get()
         logger.info('Setting initial condition')
         self._disc.initialize()
         res_rho0 = np.linalg.norm(self._disc.problem.get_variables('ResidualsDensity'))
