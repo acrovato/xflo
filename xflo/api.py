@@ -35,7 +35,8 @@ def init_xflo(cfg):
     """
     # Create and load mesh
     msh_ldr = GmshLoader(cfg['Model']['Name'])
-    msh = msh_ldr.create_mesh(cfg['Model']['AirfoilFile'])
+    n_cells, bump = _get_mesh_parameters(cfg['Model'].get('Parameters', {}))
+    msh = msh_ldr.create_mesh(cfg['Model']['AirfoilFile'], num_cells=n_cells, bump=bump)
 
     # Create writer
     wrt = VtkWriter(msh)
@@ -74,6 +75,10 @@ def init_xflo(cfg):
         'Body': bdy,
         'Solver': tsol
     }
+
+def _get_mesh_parameters(cfg):
+    """Get (default) mesh parameters"""
+    return cfg.get('NumCells', 50), cfg.get('Bump', 0.2)
 
 def _select_flux(cfg, fluid):
     """Select numerical scheme to calculate the convective flux"""

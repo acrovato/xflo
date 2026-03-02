@@ -24,7 +24,6 @@ ELEMTYPE_NNODES = {2: 3, 3: 4} # Tri, Quad
 
 class GmshLoader():
     """Create mesh and hold data structure
-    TODO allow custom sizes and names
 
     Attributes:
     _name : str
@@ -42,12 +41,16 @@ class GmshLoader():
         if not self._has_logged:
             self._finalize()
 
-    def create_mesh(self, fname=None):
+    def create_mesh(self, fname=None, num_cells=50, bump=0.2):
         """Create the mesh from a set of coordinates
 
         Parameters:
         fname : str (default : None)
             Path to file containing the coordinates of the airfoil
+        num_cells : int (default : 50)
+            Number of cells on the pressure and suction sides
+        bump : float (default : 0.2)
+            Parameter controlling the refinement at the leading and trailing edges
 
         Returns:
         msh : Mesh object
@@ -61,7 +64,7 @@ class GmshLoader():
         self._initialize()
 
         # Create geometry and mesh using Gmsh, then load into internal data structure
-        self._create_geometry(coords, le_idx, is_sharp)
+        self._create_geometry(coords, le_idx, is_sharp, num_cells, bump)
         self._create_mesh()
         msh = self._build_mesh_data()
 
@@ -195,7 +198,7 @@ class GmshLoader():
 
         return coords, le_idx, is_sharp
 
-    def _create_geometry(self, coords, le_idx, is_sharp):
+    def _create_geometry(self, coords, le_idx, is_sharp, num_cells, bump):
         """Create geometry in Gmsh
 
         Parameters:
@@ -205,6 +208,10 @@ class GmshLoader():
             Index of leading edge point
         is_sharp : bool
             Whether the airfoil has a sharp or a blunt TE
+        num_cells : int
+            Number of cells on the pressure and suction sides
+        bump : float
+            Parameter controlling the refinement at the leading and trailing edges
         """
         # Add airfoil points
         airf_ptags = []
@@ -242,13 +249,12 @@ class GmshLoader():
         gmsh.model.add_physical_group(2, [fld_tag], name='field')
 
         # Add meshing constraints
-        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[0], 51, 'Bump', coef=0.2)
-        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[1], 51, 'Bump', coef=0.2)
+        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[0], num_cells+1, 'Bump', coef=bump)
+        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[1], num_cells+1, 'Bump', coef=bump)
         if not is_sharp:
             gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[2], 2)
         for tag in ff_ctags:
             gmsh.model.geo.mesh.set_transfinite_curve(tag, 11)
-        #gmsh.model.geo.mesh.set_recombine(2, fld_tag)
         gmsh.model.geo.synchronize()
 
         # Add boundary layer

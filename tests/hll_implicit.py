@@ -23,7 +23,11 @@ def get_cfg():
     return {
         'Model': {
             'Name': 'naca0012',
-            'AirfoilFile': build_fpath('models/naca0012_sharp.dat', __file__, recurse_lvl=1)
+            'AirfoilFile': build_fpath('models/naca0012_sharp.dat', __file__, recurse_lvl=1),
+            'Parameters': {
+                'NumCells': 50,
+                'Bump': 0.2
+            }
         },
         'Freestream': {
             'AoA': 2.,
