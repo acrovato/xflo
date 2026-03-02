@@ -24,7 +24,6 @@ from xflo.utils.error import XFloRuntimeError
 
 def init_xflo(cfg):
     """Initialize xFlo
-    TODO add doc
 
     Parameters:
     cfg : dict
@@ -32,6 +31,60 @@ def init_xflo(cfg):
 
     Returns:
     Dictionary of xFlo objects : dict
+
+    Examples:
+        >>> cfg = {
+        >>>     'Model': {
+        >>>         'Name': str, # model name
+        >>>         'AirfoilFile': str, # path to file containing airfoil coordinates
+        >>>         'Parameters': {
+        >>>             'NumCells': int, # number of cells on the pressure and suction sides
+        >>>             'Bump': float, # factor controlling the refinement at the leading and trailing edges
+        >>>         }
+        >>>     },
+        >>>     'Freestream': {
+        >>>         'AoA': float, # angle of attack (degrees)
+        >>>         'Mach': float, # Mach number
+        >>>         'Altitude': float, # altitude expressed as flight level (e.g. 100 is 10000 ft)
+        >>>     },
+        >>>     'Geometry': {
+        >>>         'RefChord': float, # reference chord length
+        >>>         'RefX': flot, # reference x-coordinate
+        >>>         'RefY': float, # reference y-coordinate
+        >>>     },
+        >>>     'Scheme': {
+        >>>         'Name': str, # convective scheme name ("LaxFriedrichs", "JST", "Roe", "HLL", "HLLC")
+        >>>         'Parameters': dict, # parameters to configure the convective scheme, see their respective class
+        >>>     },
+        >>>     # Only required for second-order accurate schemes
+        >>>     'Gradient': {
+        >>>         'Name': str, # gradient reconstruction algorithm ("GreenGauss")
+        >>>         # Only required for upwind schemes
+        >>>         'Limiter': {
+        >>>             'Name': str, # limiter method name ("Venkatakrishnan")
+        >>>             'Parameters': dict, # parameters to configure the limiter, see their respective class
+        >>>         }
+        >>>     },
+        >>>     'TimeIntegration': {
+        >>>         'Name': str, # time integration method ("ExplicitEuler", "ExplicitRungeKutta4", "ImplicitEuler")
+        >>>         'Parameters': {
+        >>>             'CflInitial': float, # initial CFL number
+        >>>             'CflExponent': float, # exponent in CFL adaptation law
+        >>>             'RelativeTolerance': float, # relative tolerance on density residual
+        >>>             'MaxNumIterations': int, # maximum number of iterations
+        >>>             'SaveFrequency': int, # interval at which to save solution to disk
+        >>>         },
+        >>>         # Only required for implicit methods
+        >>>         'InnerSolver': {
+        >>>             'RelativeTolerance': float, # relative tolerance for GMRES solver
+        >>>             'AbsoluteTolerance': float, # absolute tolerance for GMRES solver
+        >>>             'MaxNumIterations': int, # maximum number of iterations for GMRES solver
+        >>>             'NumRestart': int, # number of iterations between restart for GMRES solver (Krylov maximum subspace size)
+        >>>             'DropTolerance': float, # drop tolerance for ILU preconditioner
+        >>>             'FillFactor': float, # fill ratio upper bound for ILU preconditioner
+        >>>         }
+        >>>     }
+        >>> }
     """
     # Create and load mesh
     msh_ldr = GmshLoader(cfg['Model']['Name'])
