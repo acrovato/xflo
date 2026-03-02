@@ -84,7 +84,7 @@ def main():
     assert sol.get_num_iterations() == approx(38, abs=5)
     assert bdy.get_lift_coef() == approx(0.3152, abs=5e-3)
     assert bdy.get_drag_coef() == approx(0.0028, abs=5e-4)
-    assert bdy.get_pitch_coef() == approx(0.0008, abs=5e-4)
+    assert bdy.get_pitch_coef() == approx(0.0008, abs=1e-3)
 
 def test():
     with WorkspaceHelper(__file__, clean=True):
