@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,16 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.path import WorkspaceHelper, build_fpath
 from xflo.io.loader import GmshLoader
 from xflo.io.writer import VtkWriter
 
-def get_model(name):
-    import os.path
-    return os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'models', name)
-
 def main():
     for te in ['sharp', 'blunt']:
-        fname = get_model(f'naca0012_{te}.dat')
+        fname = build_fpath(f'models/naca0012_{te}.dat', __file__, recurse_lvl=1)
         # Load mesh
         msh_ldr = GmshLoader(f'naca0012_{te}')
         msh = msh_ldr.create_mesh(fname)
@@ -32,6 +29,10 @@ def main():
         wrt = VtkWriter(msh)
         res = {'area': msh.get_cells_area()}
         wrt.write(0, res)
+
+def test():
+    with WorkspaceHelper(__file__, clean=True):
+        main()
 
 if __name__ == '__main__':
     main()

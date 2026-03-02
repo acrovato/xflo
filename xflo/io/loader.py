@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,11 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from xflo.utils.error import XFloError, XFloRuntimeError, XFloFileNotFound
 from xflo.structure.mesh import Mesh
 import gmsh
 import numpy as np
-
-# TODO allow custom sizes and names
 
 # Gmsh element type to nodes and edges count
 ELEMTYPE_NNODES = {2: 3, 3: 4} # Tri, Quad
@@ -42,12 +41,16 @@ class GmshLoader():
         if not self._has_logged:
             self._finalize()
 
-    def create_mesh(self, fname=None):
+    def create_mesh(self, fname=None, num_cells=50, bump=0.2):
         """Create the mesh from a set of coordinates
 
-        Arguments:
+        Parameters:
         fname : str (default : None)
             Path to file containing the coordinates of the airfoil
+        num_cells : int (default : 50)
+            Number of cells on the pressure and suction sides
+        bump : float (default : 0.2)
+            Parameter controlling the refinement at the leading and trailing edges
 
         Returns:
         msh : Mesh object
@@ -55,13 +58,13 @@ class GmshLoader():
         """
         # Infer coordinates file name if not given and load coordinates
         fname = fname if fname else self._name + '.dat'
-        coords, is_sharp = self._load_coordinates(fname)
+        coords, le_idx, is_sharp = self._load_coordinates(fname)
 
         # Initialize Gmsh
         self._initialize()
 
         # Create geometry and mesh using Gmsh, then load into internal data structure
-        self._create_geometry(coords, is_sharp)
+        self._create_geometry(coords, le_idx, is_sharp, num_cells, bump)
         self._create_mesh()
         msh = self._build_mesh_data()
 
@@ -154,13 +157,15 @@ class GmshLoader():
     def _load_coordinates(self, fname):
         """Load and check airfoil coordinates
 
-        Arguments:
+        Parameters:
         fname : str
             Path to file containing the coordinates of the airfoil
 
         Return:
         coords : numpy.array
             Airfoil coordinates
+        le_idx : int
+            Index of leading edge point
         is_sharp : bool
             Whether the airfoil has a sharp or a blunt TE
         """
@@ -168,15 +173,15 @@ class GmshLoader():
         try:
             coords = np.loadtxt(fname, skiprows=1)
         except:
-            raise FileNotFoundError(f'GmshLoader.__load_coordinates: file "{fname}" not found!')
+            raise XFloFileNotFound(f'File "{fname}" not found!')
 
         # Check if exactly two columns have been provided
         if coords.shape[1] != 2:
-            raise RuntimeError(f'GmshLoader.__load_coordinates: expected a list of coordinates with 2 columns, but got {coords.shape[1]} instead!')
+            raise XFloRuntimeError(f'Expected a list of coordinates with 2 columns, but got {coords.shape[1]} instead!')
 
         # Check if coordinates are in Selig format
         if coords[0, 0] != 1.0 or coords[-1, 0] != 1.0:
-            raise RuntimeError('GmshLoader.__load_coordinates: airfoil coordinates must be ordered using Selig format: TE point must be first and last (duplicated) and its x-coordinate must be equal to 1.0!')
+            raise XFloRuntimeError('Airfoil coordinates must be ordered using Selig format: TE point must be first and last (duplicated) and its x-coordinate must be equal to 1.0!')
 
         # Reverse order of coordinates if in standard Selig format to have inward normals
         if coords[1, 1] > coords[-2, 1]:
@@ -188,27 +193,37 @@ class GmshLoader():
             is_sharp = True
             coords = np.delete(coords, (-1), axis=0) # delete duplicated last point
 
-        return coords, is_sharp
+        # Get leading edge index
+        le_idx = np.argmin(coords[:, 0])
 
-    def _create_geometry(self, coords, is_sharp):
+        return coords, le_idx, is_sharp
+
+    def _create_geometry(self, coords, le_idx, is_sharp, num_cells, bump):
         """Create geometry in Gmsh
 
-        Arguments:
+        Parameters:
         coords : numpy.array
             Airfoil coordinates
+        le_idx : int
+            Index of leading edge point
         is_sharp : bool
             Whether the airfoil has a sharp or a blunt TE
+        num_cells : int
+            Number of cells on the pressure and suction sides
+        bump : float
+            Parameter controlling the refinement at the leading and trailing edges
         """
         # Add airfoil points
         airf_ptags = []
         for c in coords:
             airf_ptags.append(gmsh.model.geo.add_point(c[0], c[1], 0.0))
-        airf_ctags = []
         # Add airfoil spline
+        airf_ctags = []
+        airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags[0:le_idx + 1]))
         if is_sharp:
-            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags + [airf_ptags[0]]))
+            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags[le_idx:] + [airf_ptags[0]]))
         else:
-            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags))
+            airf_ctags.append(gmsh.model.geo.add_spline(airf_ptags[le_idx:]))
             airf_ctags.append(gmsh.model.geo.add_line(airf_ptags[-1], airf_ptags[0]))
 
         # Add farfield boundary points
@@ -234,9 +249,10 @@ class GmshLoader():
         gmsh.model.add_physical_group(2, [fld_tag], name='field')
 
         # Add meshing constraints
-        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[0], 101, 'Bump', coef=10.)
+        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[0], num_cells+1, 'Bump', coef=bump)
+        gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[1], num_cells+1, 'Bump', coef=bump)
         if not is_sharp:
-            gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[1], 2)
+            gmsh.model.geo.mesh.set_transfinite_curve(airf_ctags[2], 2)
         for tag in ff_ctags:
             gmsh.model.geo.mesh.set_transfinite_curve(tag, 11)
         gmsh.model.geo.synchronize()
@@ -251,7 +267,10 @@ class GmshLoader():
         if is_sharp:
             gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsList', [airf_ptags[0]])
             gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsSizesList', [10])
-        #gmsh.model.mesh.field.set_as_boundary_layer(bl_f)
+        else:
+            gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsList', [airf_ptags[0], airf_ptags[-1]])
+            gmsh.model.mesh.field.set_numbers(bl_f, 'FanPointsSizesList', [5])
+        gmsh.model.mesh.field.set_as_boundary_layer(bl_f)
         gmsh.model.geo.synchronize()
 
     def _create_mesh(self):
@@ -259,7 +278,6 @@ class GmshLoader():
         """
         import os
         gmsh.option.set_number('Mesh.Algorithm', 6)
-        #gmsh.option.set_number('Mesh.RecombineAll', 1)
         gmsh.option.set_number('Mesh.Optimize', 1)
         gmsh.option.set_number('General.NumThreads', os.cpu_count())
         try:
@@ -268,7 +286,7 @@ class GmshLoader():
         except Exception as e:
             gmsh.write(self._name + '.msh')
             self._finalize()
-            raise Exception(e)
+            raise XFloError(e)
 
     def _initialize(self):
         """Start Gmsh and logger
@@ -284,7 +302,7 @@ class GmshLoader():
         log_msgs = gmsh.logger.get()
         gmsh.logger.stop()
         # Write to file
-        file = open(f'log_gmsh_{self._name}', 'w')
+        file = open('log_gmsh.txt', 'w')
         for m in log_msgs:
             file.write(m + '\n')
         file.close()

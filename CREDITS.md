@@ -1,1 +1,1 @@
-xflo is Copyright (C) of Adrien Crovato.
+xFlo is Copyright (C) of Adrien Crovato.

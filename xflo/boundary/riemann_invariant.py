@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -36,8 +36,20 @@ class RiemannInvariant(BoundaryCondition):
         super().__init__(fluid, boundary_name)
 
     def set_freestream(self, aoa, mach, rho, p):
+        """Set freestream variables
+
+        Parameters:
+        aoa : float
+            Angle of attack
+        mach : float
+            Mach number
+        rho : float
+            Density
+        p : float
+            Pressure
+        """
         self._rinf = rho
-        self._cinf = self._flu.compute_speed_sound(rho, p)
+        self._cinf = self._flu.eval_speed_sound(rho, p)
         self._qinf = mach * self._cinf * np.array([np.cos(aoa), np.sin(aoa)])
         self._is_supersonic = mach > 1.
 
@@ -52,28 +64,28 @@ class RiemannInvariant(BoundaryCondition):
         # Compute primitive variables inside domain
         rho_dom, q_dom, p_dom = self._flu.eval_primitive(state)
         qn_dom = q_dom.dot(n)
-        c_dom = self._flu.compute_speed_sound(rho_dom, p_dom)
+        c_dom = self._flu.eval_speed_sound(rho_dom, p_dom)
 
         # Compute Riemann invariants
-        r_p = self._flu.compute_riemann(qn_dom, c_dom, 1)
-        r_m = self._flu.compute_riemann(qn_inf, self._cinf, -1)
+        r_p = self._flu.eval_riemann(qn_dom, c_dom, 1)
+        r_m = self._flu.eval_riemann(qn_inf, self._cinf, -1)
         if self._is_supersonic:
             if is_inflow:
-                r_p = self._flu.compute_riemann(qn_inf, self._cinf, 1) # supersonic inflow
+                r_p = self._flu.eval_riemann(qn_inf, self._cinf, 1) # supersonic inflow
             else:
-                r_m = self._flu.compute_riemann(qn_dom, c_dom, -1) # supersonic outflow
+                r_m = self._flu.eval_riemann(qn_dom, c_dom, -1) # supersonic outflow
 
         # Compute new edge normal velocity and speed of sound
-        u, c = self._flu.compute_speed_riemann(r_p, r_m)
+        u, c = self._flu.eval_speed_riemann(r_p, r_m)
 
         # Compute velocity and entropy for inflow or outflow
         if is_inflow:
             q = self._qinf + (u - qn_inf) * n
-            s = self._flu.compute_entropy(self._rinf, self._cinf)
+            s = self._flu.eval_entropy(self._rinf, self._cinf)
         else:
             q = q_dom + (u - qn_dom) * n
-            s = self._flu.compute_entropy(rho_dom, c_dom)
+            s = self._flu.eval_entropy(rho_dom, c_dom)
 
         # Compute state
-        rho, rhoe = self._flu.compute_states_entropy(s, c, q)
+        rho, rhoe = self._flu.eval_states_entropy(s, c, q)
         return np.array([rho, rho * q[0], rho * q[1], rhoe])

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# xflo
+# xFlo
 # Copyright (C) 2025 Adrien Crovato
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,19 +22,14 @@ class LaxFriedrichs(Flux):
     def __init__(self, fluid):
         super().__init__(fluid)
 
-    def compute_residual(self, state0, state1, n, l):
-        # Compute primitives from states
-        rho0, q0, p0 = self._flu.eval_primitive(state0)
-        rho1, q1, p1 = self._flu.eval_primitive(state1)
+    def compute_residual(self, s0, s1, ds0, ds1, n, l, d):
+        # Compute mean value of states
+        s = 0.5 * (s0 + s1)
 
-        # Compute Euler fluxes
-        f0 = self._flu.compute_flux(rho0, q0, p0, state0[3])
-        f1 = self._flu.compute_flux(rho1, q1, p1, state1[3])
-
-        # Compute maximum wavespeed
-        c0 = self._flu.compute_speed_sound(rho0, p0)
-        c1 = self._flu.compute_speed_sound(rho1, p1)
-        a = max([q0.dot(n) + c0, q1.dot(n) + c1])
+        # Compute primitives, Euler flux and wavespeed
+        rho, q, p = self._flu.eval_primitive(s)
+        f = self._flu.compute_flux(rho, q, p)
+        a = abs(q.dot(n)) + self._flu.eval_speed_sound(rho, p)
 
         # Compute LF flux
-        return (0.5 * (f0 + f1).dot(n) - 0.5 * a * (state0 - state1)) * l
+        return (f.dot(n) - 0.5 * a * (s0 - s1)) * l
